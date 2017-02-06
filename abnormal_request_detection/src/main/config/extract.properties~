@@ -1,0 +1,14 @@
+#
+# Extract (Science Foundation) properties
+#
+# Copyright (C) 2015,2016 xAd, Inc.
+#
+include = xcp.properties
+#-----
+
+
+
+
+#-----
+include = local.properties [optional]
+include = local-extract.properties [optional]

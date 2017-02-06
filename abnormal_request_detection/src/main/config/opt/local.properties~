@@ -1,0 +1,9 @@
+# Local Properties
+
+alert.email = victor.chu@xad.com
+
+# Slave DB
+xadcms.mysql.host = $(xadcms.mysql.master.host.ext)
+status_log.db.conn.mysql.host = $(xadcms.mysql.master.host.ext)
+
+

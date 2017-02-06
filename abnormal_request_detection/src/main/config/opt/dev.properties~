@@ -1,0 +1,9 @@
+#
+# Dev properties
+#
+
+alert.email = victor.chu@xad.com
+
+
+enigma.keep.window = 65
+enigma.keep.window.nofill = 65

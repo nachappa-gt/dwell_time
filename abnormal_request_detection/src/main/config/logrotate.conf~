@@ -1,0 +1,12 @@
+#
+# Log rotate configuration file
+#
+
+daily
+nocompress
+rotate 5
+missingok
+
+/home/xad/xcp/log/*.log {
+}
+

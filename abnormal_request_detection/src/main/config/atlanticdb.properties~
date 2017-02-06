@@ -1,0 +1,7 @@
+
+include = xcp.properties
+xadcms.mysql.dbname = atlantic
+xadcms.mysql.tables = bundle_meta_data_rev
+xadcms.data.prefix.hdfs = /data/atlantic
+xadcms.tmp.prefix = ATLANTIC_
+

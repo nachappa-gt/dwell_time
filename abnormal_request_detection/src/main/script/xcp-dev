@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Forecast ETL Command wrapper
+#
+# Copyright (C) 2013,2014.  xAd Inc.  All Rights Reserved.
+#
+
+SHARE_DIR=/home/xad/share
+PROJ_DIR=/home/xad/xcp
+
+# Select the RC files based on the OS
+if [ -f /etc/centos-release ]; then
+    # CentOS dev environment
+    DEV_RC=hadoop-dev.rc
+    RC=$SHARE_DIR/etc/$DEV_RC
+    RC=$RC:$PROJ_DIR/etc/$DEV_RC
+elif [ -f /etc/system-release ]; then
+    # Amazon Linux AMI
+    EMR_GATEWAY_RC=hadoop-emr-gateway.rc
+    RC=$SHARE_DIR/etc/$EMR_GATEWAY_RC
+    RC=$RC:$PROJ_DIR/etc/$EMR_GATEWAY_RC
+else 
+    echo "ERROR - Unknown System"
+    exit 1
+fi
+
+# Load the RC files
+RC_LIST=$(echo $RC | tr ":" "\n");
+for rc in $RC_LIST
+do 
+    if [ -f $rc ]; then
+        echo "Loading $rc ..."
+        . $rc
+    fi
+done
+
+# Define project-specific env variables
+export PERL5LIB=.:$PROJ_DIR/perl5:$SHARE_DIR/perl5
+PATH=.:/home/xad/bin:$PROJ_DIR/bin:$PIG_HOME/bin:$HADOOP_BIN_DIR:$S3_HOME:$PATH
+
+echo "  JAVA_HOME = $JAVA_HOME"
+echo "  PERL5LIB = $PERL5LIB"
+echo "  HADOOP_CONF_DIR = $HADOOP_CONF_DIR"
+
+exec xcp.pl $*
+
+
