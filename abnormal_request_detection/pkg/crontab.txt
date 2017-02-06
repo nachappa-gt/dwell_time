@@ -1,28 +1,48 @@
-#------------------------
-# Insights: ETL (victor)
-#------------------------
-0 0 * * * /usr/sbin/logrotate -s /home/xad/insights-etl/log/logrotate.status /home/xad/insights-etl/config/logrotate.conf > /dev/null 2>&1 
-## 1. Generate Visitation Hourly Summaries in HDFS
-20 * * * * /home/xad/bin/ietl vhs-gen --country us,ca --date L3 -d --lock vhs-gen-us --queue insights >> /home/xad/insights-etl/log/vhs-gen-us.log 2>&1
-40 * * * * /home/xad/bin/ietl vhs-gen --country de,gb,fr,es --date L3+1 -d --lock vhs-gen-eu --queue insights >> /home/xad/insights-etl/log/vhs-gen-eu.log 2>&1
-00 * * * * /home/xad/bin/ietl vhs-gen --country cn,jp,in --date L3+1 -d --lock vhs-gen-cj --queue insights >> /home/xad/insights-etl/log/vhs-gen-others.log 2>&1
-## 2. Push to S3 (using distcp)
-40 * * * * /home/xad/bin/ietl vhs-s3put --country us,ca --date L3 -d --lock vhs-s3put-us --queue insights >> /home/xad/insights-etl/log/vhs-s3put-us.log 2>&1
-00 * * * * /home/xad/bin/ietl vhs-s3put --country de,gb,fr,es --date L3+1 -d --lock vhs-s3put-eu --queue insights >> /home/xad/insights-etl/log/vhs-s3put-eu.log 2>&1
-10 * * * * /home/xad/bin/ietl vhs-s3put --country cn,jp,in --date L3+1 -d --lock vhs-s3put-cj --queue insights >> /home/xad/insights-etl/log/vhs-s3put-others.log 2>&1
-## 3a. Load yesterday
-55 * * * * /home/xad/bin/ietl vhs-load --country us,ca --date L2-1 -d --lock vhs-load-us >> /home/xad/insights-etl/log/vhs-load-us.log 2>&1
-15 * * * * /home/xad/bin/ietl vhs-load --country de,gb,fr,es --date L2 -d --lock vhs-load-eu >> /home/xad/insights-etl/log/vhs-load-eu.log 2>&1
-25 * * * * /home/xad/bin/ietl vhs-load --country cn,jp,in --date L2 -d --lock vhs-load-cj >> /home/xad/insights-etl/log/vhs-load-others.log 2>&1
-## 3b. Load today
-58 18-23 * * * /home/xad/bin/ietl vhs-load --country us,ca --date TODAY -d --lock vhs-load-us >> /home/xad/insights-etl/log/vhs-load-us.log 2>&1
-18 18-23 * * * /home/xad/bin/ietl vhs-load --country de,gb,fr,es --date TOMORROW -d --lock vhs-load-eu >> /home/xad/insights-etl/log/vhs-load-eu.log 2>&1
-28 18-23 * * * /home/xad/bin/ietl vhs-load --country cn,jp,in --date TOMORROW -d --lock vhs-load-cj >> /home/xad/insights-etl/log/vhs-load-others.log 2>&1
-## 4. Update Dimension Tables (once a week)
-0 3 * * 1 /home/xad/bin/ietl dim-update --lock dim-update >> /home/xad/insights-etl/log/dim-update.log 2>&1
-## 5. Monitoring
-0 9,19 * * * /home/xad/bin/ietl vhs-monitor --date L10+1 -d --lock vhs-monitor >> /home/xad/insights-etl/log/vhs-monitor.log 2>&1
-## 6. Cleaning
-0 7 * * * /home/xad/bin/ietl vhs-clean -d --lock vhs-clean >> /home/xad/insights-etl/log/vhs-clean.log 2>&1
-0 1 5 * * /home/xad/bin/ietl vhs-dwclean -d --lock vhs-clean >> /home/xad/insights-etl/log/vhs-clean.log 2>&1
+#-----------------
+# XCP: Cleaning 
+#-----------------
+0 0 * * * xad /usr/sbin/logrotate -s /home/xad/xcp/log/logrotate.status /home/xad/xcp/config/logrotate.conf > /dev/null 2>&1
+0 1 * * * xad /home/xad/bin/xcp clean --lock clean -d >> /home/xad/xcp/log/clean.log 2>&1
+
+#-----------------------------------------
+# XCP: Enigma  (vimpy)
+#-----------------------------------------
+17 * * * * xad /home/xad/bin/xcp enigma-hourly --lock enigma-cmb --config=enigma.properties --date=L6+1 --country=cmb --logtype=hourly,euwest1,apnortheast1 --queue extract >> /home/xad/xcp/log/enigma-cmb-hourly.log 2>&1
+
+#-----------------------------------------
+# XCP: Foundation Layer (Extract) (vimpy)
+#-----------------------------------------
+# Regular
+11 * * * * xad /home/xad/bin/xcp extract-hourly --lock extract-us-ex --config=extract.properties --date=L6+1 --country=us --logtype=exchange --queue extract >> /home/xad/xcp/log/extract-us-exchange.log 2>&1
+31 * * * * xad /home/xad/bin/xcp extract-hourly --lock extract-us-disp --config=extract.properties --date=L6+1 --country=us --logtype=display,euwest1 --queue extract >> /home/xad/xcp/log/extract-us-others.log 2>&1
+51 * * * * xad /home/xad/bin/xcp extract-hourly --lock extract-eu --config=extract.properties --date=L6+1 --country=de,fr,gb,it,es  --queue extract >> /home/xad/xcp/log/extract-eu.log 2>&1
+01 * * * * xad /home/xad/bin/xcp extract-hourly --lock extract-others --config=extract.properties --date=L6+1 --country=in,ca,cn,jp  --queue extract >> /home/xad/xcp/log/extract-others.log 2>&1
+
+#Data req
+21 * * * * xad /home/xad/bin/xcp extract-hourly --lock extract-dr --config=datareq.properties --date=L6-3 --queue extract --country=us,gb >> /home/xad/xcp/log/extract-dr.log 2>&1
+
+#clean
+00 5 * * *  xad /home/xad/bin/xcp extract-clean --lock extract-clean -d --config=extract.properties >> /home/xad/xcp/log/extract-clean.log 2>&1
+
+#-------------------------------------------
+# XCP: XADCMS & Atlantic DBs (victor/vimpy)
+#-------------------------------------------
+# Sqoop
+0 02,06 * * * xad cd /home/xad/xcp/tmp; /home/xad/bin/xcp xadcms-get --lock xadcms -d --queue xadcms >> /home/xad/xcp/log/xadcms.log 2>&1
+30 02 * * * xad cd /home/xad/xcp/tmp; /home/xad/bin/xcp xadcms-get -m 6 --lock atlantic --queue xadcms --config=atlanticdb.properties >> /home/xad/xcp/log/atlantic.log 2>&1
+00 04 * * * xad cd /home/xad/xcp/tmp; /home/xad/bin/xcp-py poi-get -m 6 --lock poi --queue xadcms -d  >> /home/xad/xcp/log/poi.log 2>&1
+# Clean
+0 23 * * * xad /home/xad/bin/xcp xadcms-clean --lock xadcms -d --queue xadcms >> /home/xad/xcp/log/xadcms.log 2>&1
+30 23 * * * xad /home/xad/bin/xcp xadcms-clean --lock atlantic -d --queue xadcms --config=atlanticdb.properties >> /home/xad/xcp/log/atlantic.log 2>&1
+
+#------------------------------------
+# XCP: REDSHIFT Dimensions (vimpy)
+#------------------------------------
+# Download dimension files
+10 1 * * * xad /home/xad/bin/xcp rs-dim-get -d --lock rsd >> /home/xad/xcp/log/rsg.log 2>&1
+# Archive dimension files
+10 2 * * * xad /home/xad/bin/xcp rs-dim-archive -d --lock rsa >> /home/xad/xcp/log/rsa.log 2>&1
+# Clean dimension file archive
+10 3 * * * xad /home/xad/bin/xcp rs-dim-clean -d --lock rsc >> /home/xad/xcp/log/rsc.log 2>&1
+
 
