@@ -16,22 +16,20 @@ import time
 
 from xad.common.conf import Conf
 from xad.common.commandkey import CommandKey
-from basexcp import BaseXcp
-from poidb import PoiDB
-from science_core import ScienceCore
+from baseard import BaseArd
 
 
 DEBUG = False
 
 
-class Dispatcher(BaseXcp):
+class Dispatcher(BaseArd):
 
     def __init__(self, cfg, opt):
         """Constructor"""
-        BaseXcp.__init__(self, cfg, opt.__dict__)
+        BaseArd.__init__(self, cfg, opt.__dict__)
         # Create components
-        self.POI = PoiDB(cfg, opt.__dict__)
-        self.SCI = ScienceCore(cfg, opt.__dict__)
+        
+       
         #self.logger = logging.getLogger()
 
 
@@ -144,7 +142,7 @@ class Dispatcher(BaseXcp):
         # Raise an exception
         logging.warn("Raising an exception...")
         #logging.exception("A test exception")
-        raise Exception("XCP TEST on EXCEPTION")
+        raise Exception("ARD TEST on EXCEPTION")
 
     def testSleep(self):
         """Sleep a few seconds for lock testing"""

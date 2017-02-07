@@ -10,6 +10,7 @@ Main function for ard.
 """
 
 import sys
+sys.path.append('/home/xad/ard/python')
 sys.path.append('/home/xad/share/python')
 import argparse
 import datetime
@@ -29,23 +30,16 @@ from xad.ard.dispatcher import Dispatcher
 # Constants
 DEFAULT_CONFIG_DIRS = "/home/xad/ard/config:/home/xad/share/config"
 DEFAULT_CONFIG_FILE = "ard.properties"
-DEFAULT_ALERT_EMAIL = 'victor.chu@xad.com'
+DEFAULT_ALERT_EMAIL = 'xiangling.meng@xad.com'
 DEFAULT_EMAIL_PRIORITY = '0'
-DEBUG = False
+DEBUG = True
 
 DESC = """
 NAME:
-    ard.py -- xAd tool for downloading data to HDFS from various sources.
+    ard.py -- FIXME ...
 
 DESCRIPTION:
-    This tool download data to HDFS from verious sources, such as Amazon S3,
-    PostgreSQL and MySQL.
-
-    For S3, it uses the Hadoop distcp.  For databases, it uses sqoop.
-
-    Default options are defined in the configueration files under
-
-        /home/xad/ard/config/
+    FIXME ...
 
 COMMANDS:
     This tool takes one or many commands.  A complete list of commands and
@@ -57,15 +51,9 @@ COMMANDS:
     The priority of the commands are determined by the value part of
     these commands in the configuration file.
     
-    Some commands are implemented in Perl.  Some are supported in Python.
-
-    poidb-get OR poi-get
-       Download selected POI fields from the POI DB.
-       Files will be stored in HDFS under /data/poidb.
-       A date folder will be created for each download.
+    gen
+       FIXME
     
-    poidb-clean OR poi-clean
-       Delete older POI DB files.
 """
 conf = None
 
@@ -108,7 +96,6 @@ def parse_arguments():
     parser.add_argument('--sl', help="Select the sl confidence {tll,pos.rest}")
 
     opt = parser.parse_args()
-
     return(opt)
 
 

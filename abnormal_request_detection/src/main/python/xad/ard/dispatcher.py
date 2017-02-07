@@ -16,9 +16,8 @@ import time
 
 from xad.common.conf import Conf
 from xad.common.commandkey import CommandKey
+from xad.ard.ab_req import AbnormalRequest
 from baseard import BaseArd
-from poidb import PoiDB
-from science_core import ScienceCore
 
 
 DEBUG = False
@@ -30,8 +29,8 @@ class Dispatcher(BaseArd):
         """Constructor"""
         BaseArd.__init__(self, cfg, opt.__dict__)
         # Create components
-        self.POI = PoiDB(cfg, opt.__dict__)
-        self.SCI = ScienceCore(cfg, opt.__dict__)
+        self.AR = AbnormalRequest(cfg, opt.__dict__)
+       
         #self.logger = logging.getLogger()
 
 
@@ -72,23 +71,18 @@ class Dispatcher(BaseArd):
         # Process each active key
         for cmdKey in activeKeys:
             beginTime = self._beginSession(cmdKey)
-            # POI
-            if (cmdKey == ck.get('poi-get')):
-                self.poiGet()
-            elif (cmdKey == ck.get('poi-split')):
-                self.poiSplit()
-            elif (cmdKey == ck.get('poi-clean')):
-                self.poiClean()
+            # ARD
+            if (cmdKey == ck.get('gen')):
+                self.AR.genHourly()
+            elif (cmdKey == ck.get('clean')):
+                logging.info("# ARD Cleaning... FIXME")
+            elif (cmdKey == ck.get('mon')):
+                logging.info("# ARD Monitoring... FIXME")
 
-            # Science Core Conversion
-            elif (cmdKey == ck.get('scpq-gen')):
-                self.scpqGen()
 
             # TEST
-            elif (cmdKey == ck.get('test-exception')):
-                self.testException()
-            elif (cmdKey == ck.get('test-sleep')):
-                self.testSleep()
+            elif (cmdKey == ck.get('test')):
+                logging.info("# ARD TEST")
             self._endSession(cmdKey, beginTime)
 
         logging.info("Done!")
@@ -112,46 +106,5 @@ class Dispatcher(BaseArd):
         logging.info("# {} (end)".format(title))
         logging.info("# Timestamp = {}".format(now))
         logging.info("# Elapsed = {}".format(now - beginTime))
-
-    #--------
-    # POI DB
-    #--------
-    def poiGet(self):
-        """Download POI tables."""
-        self.POI.downloadTables()
-
-    def poiSplit(self):
-        """Split the POI tables.  This is for debugging only."""
-        self.POI.splitTable()
-
-    def poiClean(self):
-        """Delete older POI DB folders"""
-        self.POI.cleanFolders()
-
-
-    #----------------------
-    # Scienc Core Parquet
-    #----------------------
-    def scpqGen(self):
-        """Convert Science Core to Parquet"""
-        self.SCI.genParquet()
-
-    #--------
-    # TEST
-    #--------
-    def testException(self):
-        """Test exception handling"""
-        # Raise an exception
-        logging.warn("Raising an exception...")
-        #logging.exception("A test exception")
-        raise Exception("ARD TEST on EXCEPTION")
-
-    def testSleep(self):
-        """Sleep a few seconds for lock testing"""
-        duration = 5
-        logging.info("Sleeping for {} seconds...".format(duration))
-        time.sleep(duration)
-        logging.info("Awake now!")
-
 
 

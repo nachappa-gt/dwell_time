@@ -9,10 +9,7 @@ PY_FILES = $(shell find $(PYTHON_DIR) -name '*.py')
 
 
 # Check perl code
-c: c-perl c-py
-
-c-perl:
-	perl -c xcp.pl
+c: c-py
 
 c-py:
 	for f in ${PY_FILES}; do\
@@ -21,7 +18,5 @@ c-py:
 	    python2.7 -m compileall $${f}; \
 	done
 
-echo:
-	@echo PY_FILES = $(PY_FILES)
 
 

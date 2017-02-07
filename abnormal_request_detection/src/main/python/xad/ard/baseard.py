@@ -151,14 +151,14 @@ class BaseArd(OptionContainer):
         #if (not self.NORUN and not hdfs.test(successPath)):
         #    raise Exception("Failed importing {}".format(table))
 
-    def _touch_local_status(
+    """def _touch_local_status(
 
     def hdfsMove(self, src, dest):
-        """Move a HDFS folder by checking that the destination folder exists"""
+        Move a HDFS folder by checking that the destination folder exists
         parent = os.path.dirname(dest)
         if (not hdfs.test(parent)):
             hdfs.mkdirp(parent)
-        hdfs.mv(src, dest)
+        hdfs.mv(src, dest)"""
     
     
     def _get_local_status(self,*args):
@@ -167,7 +167,7 @@ class BaseArd(OptionContainer):
         sub_dir = '/'.join(args)
         return '/'.join([dir, sub_dir])
 
-    def _get_science_core_avro_path(self, *args)
+    def _get_science_core_avro_path(self, *args):
         
         dir = self.cfg.get('hdfs.data.dir')
         sub_dir = '/'.join(args)

@@ -8,9 +8,9 @@ Copyright (C) 2016.  xAd, Inc.  All Rights Reserved.
 import logging
 import os
 import re
+import sys
 from string import Template    
 import subprocess
-
 
 from baseard import BaseArd
 from datetime import datetime
@@ -18,8 +18,9 @@ from datetime import datetime
 from xad.common import dateutil
 from xad.common import hdfs
 
-sys.path.append('/home/xad/sar-optimization/lib/modules/cmnfunc')
-import cmnfunc
+# Huitao's library
+#sys.path.append('/home/xad/sar-optimization/lib/modules/cmnfunc')
+#import cmnfunc
 
 
 class AbnormalRequest(BaseArd):
@@ -33,30 +34,29 @@ class AbnormalRequest(BaseArd):
     # Processing Hourly Data
     #-----------------------
 
-    def downloadTables(self):
+    def genHourly(self):
 
         """Generate updated Science Core orc table with new features in it. """
         logging.info('Generating Science Core orc files with Abnormal Request...')
 
         # Get parameters
-        dates = self.getDates('enigma.dates', 'yyyy/MM/dd')
+        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
         hours = self.getHours()
         regions = self.getRegions()
-        fills = self.getFills()
-        sl_levels = self.getSLLevels()
+        #sl_levels = self.getSLLevels()
 
         logging.info("- dates = {}".format(dates))
         logging.info("- hours = [{}]".format(",".join(hours)))
         logging.info("- regions = {}".format(regions))
-        logging.info("- fills = {}".format(fills))
-        logging.info("- sl levels = {}".format(sl_levels))       
+        #logging.info("- sl levels = {}".format(sl_levels))       
+
+	return
 
         # Looping through all combinations
         for date in dates:
             for region in regions:
                 (country,logtype) = self.splitRegion(region)
 
-                # Check daily status
                 # no _get_local_status function before, need to write one
                 dailyStatus = self._get_local_status(country, logtype, date, SUCCESS_GEN)
                 
@@ -64,26 +64,18 @@ class AbnormalRequest(BaseArd):
                     logging.debug("x SKIP: found {}".format(dailyStatus))
                     continue
 
+                # Check daily status (optional)
+
+
                 for hour in hours:
-                    # Check hourly status
-                    hourlyStatus = self._get_local_status(country, logtype, date, hour, SUCCESS_GEN)
-                    if (os.path.exists(hourlyStatus)):
-                        logging.debug("x SKIP: found {}".format(hourlyStatus))
-                        continue
+                    # Check hourly gen status 
 
-                    # Check HDFS Source
-                    # no _get_science_core_avro_path function, need to write one
-                    input_path = self._get_science_core_avro_path(country, logtype, date, hour)
-                    ##success_path = os.path.join(input, "fill/tll/_SUCCESS")
-                    if (not hdfs.has(input_path)):
-                        logging.info("x SKIP: MISSING {}".format(input_path))
-                        break
-
-                    # Dig into sub folders
-                    logging.info("# Checking {}_{} {}:{}...".format(country, logtype, date, hour))
-                    for fill in fills:
-                        for sl in sl_levels:
-                            self.run_hive_cmd(country,logtype,date,hour,fill,sl)
+                    # Check source status
+                    #hourlyStatus = self._get_local_status(country, logtype, date, hour, SUCCESS_GEN)
+                    #if (os.path.exists(hourlyStatus)):
+                    #    logging.debug("x SKIP: found {}".format(hourlyStatus))
+                    #    continue
+                    self.run_hive_cmd(country,logtype,date,hour,fill,sl)
 
                     # Touch hourly status
                     if (self._has_full_hour(hourlyStatus) and not self.NORUN):
@@ -98,11 +90,11 @@ class AbnormalRequest(BaseArd):
         
         logging.info("Running Hive Command Line......")
          
-        queue = xianglingmeng
+        queue = "xianglingmeng"
         table_name = "xianglingmeng.science_core_orc"
         self.create_hql_file(table_name, country, date, logtype, hour, fill)
         output_path = "./hive.hql"
-        cmd = ["beeline", "-n", "\"jdbc:hive2://ip-172-17-25-136.ec2.internal:2181,ip-172-17-25-137.ec2.internal:2181,ip-172-17-25-135.ec2.internal:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2", "-f", "--hiveconf", "tez.queue.name ==", queue, "-f", output_path]
+        cmd = ["beeline", "-n", "\"jdbc:hive2://ip-172-17-25-136.ec2.internal:2181,ip-172-17-25-137.ec2.internal:2181,ip-172-17-25-135.ec2.internal:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2","--hiveconf", "tez.queue.name ==", queue, "-f", output_path]
         
         p = subprocess.popen(cmd)
 
@@ -130,6 +122,7 @@ class AbnormalRequest(BaseArd):
 
 
     def _touch_local_status(args):
+        loggint.info("Generating Local Status File......")
         dir = 'ard'+'/' + args
         cmd = 'mkdir -p '
         cmd = cmd + dir
