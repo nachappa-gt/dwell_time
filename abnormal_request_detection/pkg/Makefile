@@ -101,7 +101,7 @@ s4g1ci:
 
 # SCI4 Gateway 2
 S4G2 = ec2-54-197-98-205.compute-1.amazonaws.com
-s4g2: s4g2p s4g2i
+s4g2 g2: s4g2p s4g2i
 
 s4g2p:
 	ssh $(S4G2) "if [ ! -d $(FTP_DIR) ]; then mkdir -p $(FTP_DIR); fi"

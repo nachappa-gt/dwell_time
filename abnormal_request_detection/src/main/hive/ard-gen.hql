@@ -1,6 +1,8 @@
-set tez.queue.name = xianglingmeng;
+-- set tez.queue.name = xianglingmeng;
 add file ard_mapper_orc.py;
 add file ard_reducer_orc.py;
+
+-- Create a temporary table
 create table xianglingmeng.ard_orc_partition 
 (r_timestamp string, request_id string, pub_id string,
  tsrc_id string, sp_iab_category string, user_iab_category string,
