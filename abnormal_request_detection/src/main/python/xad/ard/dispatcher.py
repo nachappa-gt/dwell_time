@@ -16,6 +16,7 @@ import time
 
 from xad.common.conf import Conf
 from xad.common.commandkey import CommandKey
+from xad.common.statuslog import StatusLog
 from xad.ard.ab_req import AbnormalRequest
 from baseard import BaseArd
 
@@ -29,10 +30,8 @@ class Dispatcher(BaseArd):
         """Constructor"""
         BaseArd.__init__(self, cfg, opt.__dict__)
         # Create components
-        self.AR = AbnormalRequest(cfg, opt.__dict__)
-       
-        #self.logger = logging.getLogger()
-
+        self.STATUS = StatusLog(cfg, prefix='status_log_local')
+        self.AR = AbnormalRequest(cfg, opt.__dict__, self.STATUS)
 
     def run(self):
         """Acquire lock and dispatch commands.

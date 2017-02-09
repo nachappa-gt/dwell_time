@@ -32,7 +32,7 @@ DEFAULT_CONFIG_DIRS = "/home/xad/ard/config:/home/xad/share/config"
 DEFAULT_CONFIG_FILE = "ard.properties"
 DEFAULT_ALERT_EMAIL = 'xiangling.meng@xad.com'
 DEFAULT_EMAIL_PRIORITY = '0'
-DEBUG = True
+DEBUG = False
 
 DESC = """
 NAME:
@@ -74,7 +74,6 @@ def parse_arguments():
     parser.add_argument('--date', help="Date(s)")
     parser.add_argument('-d', '--debug', action='store_true',
                         help="Turn on debugging")
-    parser.add_argument('--fill', help="Select the fill/nf folder")
     parser.add_argument('-f', '--force', action='store_true',
                         help="Force the execution")
     parser.add_argument('--hour', help="Hour(s)")
@@ -84,7 +83,6 @@ def parse_arguments():
                         default="lock")
     parser.add_argument('--logtype', 
                         help="Log types (e.g. exchange, display, euwest1); aka product types")
-    parser.add_argument('-m', '--maxmaps', help="Maximum number of mappers")
     parser.add_argument('-n', '--norun', action='store_true',
                         help="No run.")
     parser.add_argument('-ne', '--noemail', action='store_true',
@@ -93,7 +91,6 @@ def parse_arguments():
                         help="No locking")
     parser.add_argument('--output', help="Temporary HDFS output folders")
     parser.add_argument('-q', '--queue', help="YARN queue name")
-    parser.add_argument('--sl', help="Select the sl confidence {tll,pos.rest}")
 
     opt = parser.parse_args()
     return(opt)

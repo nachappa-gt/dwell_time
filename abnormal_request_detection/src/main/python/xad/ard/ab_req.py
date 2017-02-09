@@ -17,6 +17,7 @@ from datetime import datetime
 
 from xad.common import dateutil
 from xad.common import hdfs
+from xad.common import system
 
 # Huitao's library
 #sys.path.append('/home/xad/sar-optimization/lib/modules/cmnfunc')
@@ -26,13 +27,14 @@ from xad.common import hdfs
 class AbnormalRequest(BaseArd):
     """A class for downloading tables from the POI database."""
 
-    def __init__(self, cfg, opt):
+    def __init__(self, cfg, opt, status_log):
         """Constructor"""
         BaseArd.__init__(self, cfg, opt)
+        self.status_log = status_log
  
-    #-----------------------
+    #------------------------
     # Processing Hourly Data
-    #-----------------------
+    #------------------------
 
     def genHourly(self):
 
@@ -40,7 +42,7 @@ class AbnormalRequest(BaseArd):
         logging.info('Generating Science Core orc files with Abnormal Request...')
 
         # Get parameters
-        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
+        dates = self.getDates('ard.process.window', 'yyyy-MM-dd')
         hours = self.getHours()
         regions = self.getRegions()
         #sl_levels = self.getSLLevels()
@@ -50,41 +52,50 @@ class AbnormalRequest(BaseArd):
         logging.info("- regions = {}".format(regions))
         #logging.info("- sl levels = {}".format(sl_levels))       
 
+        scx_key_base = self.cfg.get('status_log_local.key.science_core_x')
+        daily_tag = self.cfg.get('status_log_local.tag.daily')
+
         # Looping through all combinations
         for date in dates:
             for region in regions:
                 (country,logtype) = self.splitRegion(region)
 
-                # no _get_local_status function before, need to write one
-                dailyStatus = self._get_local_status(country, logtype, date)
-                
-                if (os.path.exists(dailyStatus)):
-                    logging.debug("x SKIP: found {}".format(dailyStatus))
+                # Check daily status (optional)
+                hourly_key = '/'.join([scx_key_base, country, logtype])
+                daily_key = '/'.join([hourly_key, daily_tag])
+
+                daily_status = self.status_log.getStatus(daily_key, date)
+                if (daily_status is not None and daily_status == 1 and not self.FORCE):
+                    logging.debug("x SKIP: found daily status {} {}".format(daily_key, date))
                     continue
 
-                # Check daily status (optional)
-
-
+                hour_count = 0
                 for hour in hours:
                     # Check hourly gen status 
+                    hourly_status = self.status_log.getStatus(daily_key, date + "/" + hour)
+                    if (hourly_status is not None and hourly_status == 1 and not self.FORCE):
+                        logging.debug("x SKIP: found hourly status {} {}:{}".format(hourly_key, date, hour))
+                        ++hour_count
+                        continue
 
-                    # Check source status
-                    #hourlyStatus = self._get_local_status(country, logtype, date, hour, SUCCESS_GEN)
-                    #if (os.path.exists(hourlyStatus)):
-                    #    logging.debug("x SKIP: found {}".format(hourlyStatus))
-                    #    continue
+                    # Check source (science_core_hrly) status 
+                    # FIXME
+
+                    # Run the Hive command
                     self.run_hive_cmd(country,logtype,date,hour)
 
                     # Touch hourly status
-                    if (self._has_full_hour(hourlyStatus) and not self.NORUN):
-                        self._touch_local_status(hourlyStatus)
+                    if (not self.NORUN):
+                        self.status_log.addStatus(hourly_key, date + "/" + hour)
+                        ++hour_count
 
                 # Touch daily status
-                if (self._has_full_day(dailyStatus) and not self.NORUN):
-                    self._touch_local_status(dailyStatus)
+                if (hour_count == 24):
+                    self.status_log.addStatus(daily_key, date)
 
 
     def run_hive_cmd(self,country,logtype,date,hour):
+        """Run Hive command to generate science_core_x"""
         
         logging.info("Running Hive Command Line......")
          
@@ -95,19 +106,31 @@ class AbnormalRequest(BaseArd):
 
         # FIXME: Need a unique name
         # FIXME: Don't hard code the connection infor
-        cmd = ["beeline", "-u", "\"jdbc:hive2://ip-172-17-25-136.ec2.internal:2181,ip-172-17-25-137.ec2.internal:2181,ip-172-17-25-135.ec2.internal:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2","--hiveconf", "tez.queue.name ==", queue, "-n", "xianglingmeng", "-f", hql_path]
-        
-        p = subprocess.Popen(cmd)
+        cmd = ["beeline"]
+        cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
+        cmd += ["--hiveconf", "tez.queue.name=" + queue ]
+        cmd += ["-n", "xianglingmeng"]  # FIXME: don't hard code.  Get from the system.
+        cmd += ["-f", hql_path]
+        cmd += ["--hivevar", '"' + "ARD_MAPPER=" + "hdfs://" +"/user/xianglingmeng/ard/ard_model_files/ard_mapper_orc.py"+ '"']
+        cmd += ["--hivevar", '"' +"ARD_REDUCER=" + "hdfs://" + "/user/xianglingmeng/ard/ard_model_files/ard_reducer_orc.py" + '"']
+        cmd += ["--hivevar", '"TMP_TABLE=' + self.cfg.get('ard.tmp.table')+ '"' ]
+        cmd += ["--hivevar", '"SCIENCE_CORE_TABLE=' + self.cfg.get('ard.input.table') + '"']
+        cmd += ["--hivevar", '"COUNTRY=' +"'"+ country + "'"+'"']
+        cmd += ["--hivevar", '"LOGTYPE=' +"'"+ logtype+ "'" +'"']
+        cmd += ["--hivevar", '"DATE=' +"'"+ date+ "'" + '"']
+        cmd += ["--hivevar", '"HOUR=' + hour + '"']
+        cmdStr = " ".join(cmd)
 
-        # FIXME: Delete the hql file
-    
+        system.execute(cmdStr, self.NORUN)
+
+
     def _touch_local_status(args):
+        """Touch the local file for status tracking (NOT USED)"""
         loggint.info("Generating Local Status File......")
         dir = 'ard'+'/' + args
         cmd = 'mkdir -p '
         cmd = cmd + dir
         p = subprocess.Popen(cmd, shell = True)
-        
     
    
 
