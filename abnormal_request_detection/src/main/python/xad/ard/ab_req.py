@@ -99,40 +99,34 @@ class AbnormalRequest(BaseArd):
         
         logging.info("Running Hive Command Line......")
          
-        # FIXME: Don't hard code parameters
-        queue = "xianglingmeng"
-        table_name = "xianglingmeng.science_core_orc"
+        queue = self.cfg.get('ard.default.queue')
+        table_name = self.cfg.get('ard.default.tmp.schema') 
+        table_name += country + hour + logtype
+        join_table = self.cfg.get('ard.default.join.schema')
+        join_table += country + hour + logtype 
         hql_path = self.cfg.get('hive.script.ard-gen')
 
-        # FIXME: Need a unique name
-        # FIXME: Don't hard code the connection infor
+        
+        
         cmd = ["beeline"]
         cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
-        cmd += ["--hiveconf", "tez.queue.name=" + queue ]
-        cmd += ["-n", "xianglingmeng"]  # FIXME: don't hard code.  Get from the system.
+        cmd += ["--hiveconf", "tez.queue.name=" + queue]
+        cmd += ["-n", 'xad']  #FIXME need to get username from system
         cmd += ["-f", hql_path]
-        cmd += ["--hivevar", '"' + "ARD_MAPPER=" + "hdfs://" +"/user/xianglingmeng/ard/ard_model_files/ard_mapper_orc.py"+ '"']
-        cmd += ["--hivevar", '"' +"ARD_REDUCER=" + "hdfs://" + "/user/xianglingmeng/ard/ard_model_files/ard_reducer_orc.py" + '"']
-        cmd += ["--hivevar", '"TMP_TABLE=' + self.cfg.get('ard.tmp.table')+ '"' ]
+        cmd += ["--hivevar"]
+        cmd += ['"' + "ARD_MAPPER=" + "hdfs://" +self.cfg.get('hdfs.model.mapper.dir')+'"']
+        cmd += ["--hivevar"]
+        cmd += ['"' +"ARD_REDUCER=" + "hdfs://" +self.cfg.get('hdfs.model.reducer.dir')+'"']
+        cmd += ["--hivevar", '"TMP_TABLE=' + table_name + '"' ]
         cmd += ["--hivevar", '"SCIENCE_CORE_TABLE=' + self.cfg.get('ard.input.table') + '"']
+        cmd += ["--hivevar", '"JOIN_TABLE=' + join_table + '"']
         cmd += ["--hivevar", '"COUNTRY=' +"'"+ country + "'"+'"']
         cmd += ["--hivevar", '"LOGTYPE=' +"'"+ logtype+ "'" +'"']
         cmd += ["--hivevar", '"DATE=' +"'"+ date+ "'" + '"']
         cmd += ["--hivevar", '"HOUR=' + hour + '"']
         cmdStr = " ".join(cmd)
 
-        system.execute(cmdStr, self.NORUN)
-
-
-    def _touch_local_status(args):
-        """Touch the local file for status tracking (NOT USED)"""
-        loggint.info("Generating Local Status File......")
-        dir = 'ard'+'/' + args
-        cmd = 'mkdir -p '
-        cmd = cmd + dir
-        p = subprocess.Popen(cmd, shell = True)
-    
-   
+        system.execute(cmdStr, self.NORUN)   
 
     #-------------------
     # Helper Functions
@@ -168,5 +162,13 @@ class AbnormalRequest(BaseArd):
         folder = "_".join([prefix, date])
         path = os.path.join(appTmpDir, folder)
         return(path)
+
+    def _touch_local_status(args):
+        """Touch the local file for status tracking (NOT USED)"""
+        loggint.info("Generating Local Status File......")
+        dir = 'ard'+'/' + args
+        cmd = 'mkdir -p '
+        cmd = cmd + dir
+        p = subprocess.Popen(cmd, shell = True)
 
 

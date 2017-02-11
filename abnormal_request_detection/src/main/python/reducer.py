@@ -17,7 +17,8 @@ def get_clusters(uid_requests):
     requests = []
     cluster_request = {}
     try:           
-        for r in uid_requests:              
+        for i in range(len(uid_requests)): 
+            r = uid_requests[i]             
             if int(r[5]) < 94:
                 continue
             
@@ -26,7 +27,7 @@ def get_clusters(uid_requests):
                 pre_cluster = [float(r[3]), float(r[4]), int(r[1])] 
                 clusters.append(pre_cluster)
                 pre_requests = []
-                pre_requests.append(r[2])
+                pre_requests.append(i)
                 requests.append(pre_requests)
                 ## save the clusters and corresponding requests in separate list to modify it 
                 ## more easily
@@ -41,7 +42,7 @@ def get_clusters(uid_requests):
                     cluster = clusters[i]
 
                     if cur_cluster[0] == cluster[0] and cur_cluster[1] == cluster[1]:
-                        requests[i].append(r[2])
+                        requests[i].append(i)
                         clusters[i] = cur_cluster
                         flag = True
                         break
@@ -53,19 +54,19 @@ def get_clusters(uid_requests):
                         
                             weighted_cluster = flat_kernel_update(cluster,cur_cluster,requests)
                             clusters[i] = [weighted_cluster[0],weighted_cluster[1], cur_cluster[2]]
-                            requests[i].append(r[2])
+                            requests[i].append(i)
                             flag = True
                             break
                 if not flag:
 
                     clusters.append(cur_cluster)
                     cur_requests = []
-                    cur_requests.append(r[2])
+                    cur_requests.append(i)
                     requests.append(cur_requests)
                                     
-        for i in range(len(clusters)):
+        for j in range(len(clusters)):
 
-            cluster_request[tuple(clusters[i])] = requests[i]
+            cluster_request[tuple(clusters[j])] = requests[j]
         
         return cluster_request
 
@@ -100,35 +101,37 @@ def main(separator='\t'):
             if len(cluster_requests) == 0:
                 
                 for r in uid_requests:
-                    print "%s%s%s%s%s" % (uid, separator, r[2], separator,'1') 
+                    print "%s%s%s%s%s" % (r[2], separator,'1',separator,r[6]) 
 
             elif len(cluster_requests) == 1: 
                          
                 for r in uid_requests:
                     if int(r[5]) >= 94:
-                            print "%s%s%s%s%s" % (uid, separator, r[2], separator,'0') 
+                            print "%s%s%s%s%s" % (r[2], separator,'0',separator,r[6]) 
                     else:
-                            print "%s%s%s%s%s" % (uid, separator, r[2], separator,'1')
+                            print "%s%s%s%s%s" % (r[2], separator,'1',separator,r[6])
 
             else:
                                
                 if float(len(cluster_requests[0][1])) / len(cluster_requests[1][1]) > 2.0:
                     
-                    for r in cluster_requests[0][1]:
-                        print "%s%s%s%s%s" % (uid, separator, r, separator,'0')
+                    for i in cluster_requests[0][1]:
+                        r = uid_requests[i]
+                        print "%s%s%s%s%s" % (r[2], separator,'0',separator,r[6])
 
                     for i in range(1, len(cluster_requests)):
-                        for r in cluster_requests[i][1]:
-                            print "%s%s%s%s%s" % (uid, separator, r, separator,'2')
+                        for j in cluster_requests[i][1]:
+                            r = uid_requests[j]
+                            print "%s%s%s%s%s" % (r[2], separator,'2',separator,r[6])
 
                     for r in uid_requests:
                         if int(r[5]) < 94:
-                            print "%s%s%s%s%s" % (uid, separator, r[2], separator,'1')
+                            print "%s%s%s%s%s" % (r[2], separator,'1',separator,r[6])
 
                 else:
 
                     for r in uid_requests:
-                        print "%s%s%s%s%s" % (uid, separator, r[2], separator,'3')
+                        print "%s%s%s%s%s" % (r[2], separator,'3',separator,r[6])
 
         except ValueError:
             
