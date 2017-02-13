@@ -118,8 +118,10 @@ hiveserver.uri = jdbc:hive2://ip-172-17-25-136.ec2.internal:2181,ip-172-17-25-13
 ard.input.table = science_core_orc
 ard.tmp.table = xianglingmeng.ard_orc
 
-ard.default.queue = location
-ard.default.schema = xianglingmeng.tmp
+
+ard.default.queue = insights.user_freq
+ard.default.tmp.schema = xianglingmeng.tmp
+ard.default.join.schema = xianglingmeng.join
 
 #-------------------
 # Global Status Log

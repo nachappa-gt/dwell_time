@@ -13,7 +13,7 @@
 -- add file hdfs:///user/xianglingmeng/ard/ard_model_files/mapper.py;
 -- add file hdfs:///user/xianglingmeng/ard/ard_model_files/reducer.py;
 
-set tez.queue.name = location;
+set tez.queue.name = xianglingmeng;
 add file ${ARD_MAPPER};
 add file ${ARD_REDUCER};
 
@@ -32,7 +32,7 @@ from (select transform (*) using 'python mapper.py'
 ) a;
 
 set hive.execution.engine = mr;
-set mapred.job.queue.name = location;
+set mapred.job.queue.name = xianglingmeng;
 set hive.auto.convert.join = true;
 
 -- Join the result with original table 
@@ -45,7 +45,7 @@ create table ${JOIN_TABLE} as
     
 --Insert the join table into the final table
 set hive.execution.engine = tez; 
-set tez.queue.name = location;
+set tez.queue.name = xianglingmeng;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
 insert into table xianglingmeng.ard_orc_partition
