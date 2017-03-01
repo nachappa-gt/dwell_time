@@ -167,7 +167,7 @@ class BaseArd(OptionContainer):
         sub_dir = '/'.join(args)
         return '/'.join([dir, sub_dir])
 
-    def _get_science_core_avro_path(self, *args)
+    def _get_science_core_avro_path(self, *args):
         
         dir = self.cfg.get('hdfs.data.dir')
         sub_dir = '/'.join(args)
@@ -187,6 +187,7 @@ class BaseArd(OptionContainer):
             retval = self.cfg.get_array(key)
         #logging.debug("Countries = {}".format(retval))
         return retval
+    
 
     def _get_country_logtypes(self, country, logtypeKey='default.logtypes'):
         """Get logtypes associated with a country.  The user may override
@@ -222,7 +223,10 @@ class BaseArd(OptionContainer):
         regions = list()
         for c in countries:
             # Get logtypes
-            logtypes = self._get_country_logtypes(c, logtypeKey)
+            if (self.LOGTYPE):
+                logtypes = re.split("[,\s]+", self.LOGTYPE)
+            else:
+                logtypes = self._get_country_logtypes(c, logtypeKey)
             for x in logtypes:
                 # Make regions
                 r = self.makeRegion(c, x)

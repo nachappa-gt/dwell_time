@@ -31,6 +31,7 @@ proj.log.dir    = $(proj.home)/log
 proj.status.dir = $(proj.home)/status
 proj.tmp.dir    = $(proj.home)/tmp
 proj.hive.dir   = $(proj.home)/hive
+proj.spark.dir  = $(proj.home)/spark
 proj.lock.dir   = $(proj.home)/lock
 proj.pig.dir    = $(proj.home)/pig
 proj.python.dir = $(proj.home)/python
@@ -112,14 +113,15 @@ python.script.ard_reducer = $(proj.python.dir)/ard_reducer_orc.py
 #--------------
 hiveserver.uri = jdbc:hive2://ip-172-17-25-136.ec2.internal:2181,ip-172-17-25-137.ec2.internal:2181,ip-172-17-25-135.ec2.internal:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
 
+hiveserver.uri.embeded = jdbc:hive2://
 #------------
 # ARD Gen
 #------------
-ard.input.table = science_core_orc
+ard.input.table = science_core_hrly
 ard.tmp.table = xianglingmeng.ard_orc
 
 
-ard.default.queue = insights.user_freq
+ard.default.queue = user_freq
 ard.default.tmp.schema = xianglingmeng.tmp
 ard.default.join.schema = xianglingmeng.join
 

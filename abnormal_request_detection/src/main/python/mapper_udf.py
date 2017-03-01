@@ -19,8 +19,7 @@ def main(separator='\t'):
 
         if request[17] != '' and request[17] != 'APP_AID' and request[17] != 'c3ac59b8ed434a4830a65157d4d132d3aab9781f':
         
-            print "%s%s%s%s%s%s%s%s%s%s%s%s%s" % (request[17],separator,request[0],separator,
-            request[1],separator,request[11],separator,request[12],separator,request[13],separator,request[61])
+            print separator.join(request)
   
 if __name__ == "__main__":
     main()

@@ -5,7 +5,7 @@
 -- 
 
 -- Initialize the final table. Only need to run once
-create external table xianglingmeng.ard_orc_partition (
+create external table science_core_ex (
  r_timestamp bigint, request_id string, pub_id int,
  tsrc_id bigint, sp_iab_category array<string>, user_iab_category array<string>,
  user_ip string, city string, state string,
@@ -43,7 +43,7 @@ partitioned by (cntry string, dt string, hour string, prod_type string,
 fill string, loc_score string)
 row format delimited fields terminated by '\t'
 stored as orc
-location '/data/science_core_x';
+location '/data/science_core_ex';
 
 
 -- vim: ft=sql

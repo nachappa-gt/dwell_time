@@ -82,7 +82,7 @@ class AbnormalRequest(BaseArd):
                     # FIXME
 
                     # Run the Hive command
-                    self.run_hive_cmd(country,logtype,date,hour)
+                    self.run_spark_cmd(country,logtype,date,hour)
 
                     # Touch hourly status
                     if (not self.NORUN):
@@ -94,40 +94,44 @@ class AbnormalRequest(BaseArd):
                     self.status_log.addStatus(daily_key, date)
 
 
-    def run_hive_cmd(self,country,logtype,date,hour):
-        """Run Hive command to generate science_core_x"""
+    def run_spark_cmd(self,country,logtype,date,hour):
+        """Run Spark command to generate science_core_x"""
         
-        logging.info("Running Hive Command Line......")
+        logging.info("Running Spark Command Line......")
          
         queue = self.cfg.get('ard.default.queue')
-        table_name = self.cfg.get('ard.default.tmp.schema') 
-        table_name += country + hour + logtype
-        join_table = self.cfg.get('ard.default.join.schema')
-        join_table += country + hour + logtype 
-        hql_path = self.cfg.get('hive.script.ard-gen')
+        spark_path = self.cfg.get('spark.script.process')
+        driver_memory = self.cfg.get('spark.default.driver_memory')
+        executor_memory = self.cfg.get('spark.default.executor_memory')
+        num_executors = self.cfg.get('spark.default.num_executors')
+        packages = self.cfg.get('spark.default.databricks')
+        
+        dates = date.split('-')
+        year = dates[0]
+        month = dates[1]
+        day = dates[2]
+        
+ 
+        cmd = ["SPARK_MAJOR_VERSION=2"]
+        cmd += ["spark-submit"]
+        cmd += ["--master", "yarn"]
+        cmd += ["--queue", queue ]
+        cmd += ["--driver-memory", driver_memory]
+        cmd += ["--executor-memory", executor_memory]
+        cmd += ["--num-executors", num_executors]
+        cmd += ["--packages", packages]
+        cmd += [spark_path]
+        cmd += ["--country", country]
+        cmd += ["--logtype", logtype]
+        cmd += ["--year", year]
+        cmd += ["--month", month]
+        cmd += ["--day", day]
+        cmd += ["--hour", hour]
 
-        
-        
-        cmd = ["beeline"]
-        cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
-        """cmd += ["-u", self.cfg.get('hiveserver.uri.embeded')]"""
-        cmd += ["--hiveconf", "tez.queue.name=" + queue]
-        cmd += ["-n", 'xad']  #FIXME need to get username from system
-        cmd += ["-f", hql_path]
-        cmd += ["--hivevar"]
-        cmd += ['"' + "ARD_MAPPER=" + "hdfs://" +self.cfg.get('hdfs.model.mapper.dir')+'"']
-        cmd += ["--hivevar"]
-        cmd += ['"' +"ARD_REDUCER=" + "hdfs://" +self.cfg.get('hdfs.model.reducer.dir')+'"']
-        cmd += ["--hivevar", '"TMP_TABLE=' + table_name + '"' ]
-        cmd += ["--hivevar", '"SCIENCE_CORE_TABLE=' + self.cfg.get('ard.input.table') + '"']
-        cmd += ["--hivevar", '"JOIN_TABLE=' + join_table + '"']
-        cmd += ["--hivevar", '"COUNTRY=' +"'"+ country + "'"+'"']
-        cmd += ["--hivevar", '"LOGTYPE=' +"'"+ logtype+ "'" +'"']
-        cmd += ["--hivevar", '"DATE=' +"'"+ date+ "'" + '"']
-        cmd += ["--hivevar", '"HOUR=' + hour + '"']
         cmdStr = " ".join(cmd)
 
-        system.execute(cmdStr, self.NORUN)   
+        system.execute(cmdStr, self.NORUN)
+        #subprocess.Popen(cmdStr, shell=True)   
 
     #-------------------
     # Helper Functions

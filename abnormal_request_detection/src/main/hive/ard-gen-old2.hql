@@ -16,7 +16,7 @@
 set tez.queue.name = user_freq;
 add file ${ARD_MAPPER};
 add file ${ARD_REDUCER};
-set mapreduce.job.reduces= 50;
+
 --
 -- Process science core hourly data and identify abnormal requests.
 -- Save the output into a tmp table.
@@ -30,11 +30,10 @@ from (select transform (*) using 'python mapper.py'
     where cntry = ${COUNTRY} and dt = ${DATE} and hour = ${HOUR} and prod_type = ${LOGTYPE}
     distribute by uid sort by uid
 ) a;
-
 set hive.execution.engine=mr;
 set mapred.job.queue.name = user_freq;
+set hive.auto.convert.join = true;
 
-set hive.auto.convert.join = false;
 -- Join the result with original table 
 create table ${JOIN_TABLE} as
     select a.*, b.abnormal_request, cast(b.maps as bigint) as maps
@@ -48,7 +47,7 @@ set hive.execution.engine = tez;
 set tez.queue.name = user_freq;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
-insert overwrite table science_core_ex
+insert into table xianglingmeng.ard_orc_partition
 partition(cntry, dt, hour, prod_type, fill, loc_score)
 select r_timestamp, request_id, pub_id, tsrc_id, sp_iab_category, user_iab_category,
     user_ip, city, state, zip, country, latitude,longitude, sl_adjusted_confidence,
