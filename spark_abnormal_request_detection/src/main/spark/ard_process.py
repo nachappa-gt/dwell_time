@@ -15,22 +15,7 @@ def main():
     sc = SparkContext(conf = conf)
     
     sqlContext = SQLContext(sc)
-    hiveContext = HiveContext(sc)
-    
-    """args = sys.argv
-    country = args[16]
-    log_type = args[17]
-    year = args[18]
-    month = args[19]
-    day = args[20]
-    hour = args[21]"""
-
-    """country = 'gb'
-    log_type = 'display'
-    year = '2017'
-    month = '02'
-    day = '10'
-    hour = '00'"""
+    hiveContext = HiveContext(sc)    
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--country", help="country")
@@ -39,6 +24,7 @@ def main():
     parser.add_argument("--month", help="month")
     parser.add_argument("--day", help="day")
     parser.add_argument("--hour", help="hour")
+    parser.add_argument("--partitions",help="partitions")
     
     args = parser.parse_args()
     if args.country:
@@ -53,6 +39,11 @@ def main():
         day = args.day
     if args.hour:
         hour = args.hour
+    if args.partitions:
+        partitions_str = args.partitions
+        partitions = partitions_str.split(',')
+       
+          
     
     # path for tll/pos data and rest data separately
     base_dir = '/data/extract'
@@ -62,8 +53,8 @@ def main():
     
     # using databricks to load avro data
     # filter data based on sl_adjusted_confidence, in order to reduce the amount of data for further process
-    df_tp = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_tp).cache()
-    df = df_tp.where((df_tp.uid !='') & (df_tp.sl_adjusted_confidence >= 94))
+    df_tp = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_tp) 
+    df = df_tp.where(df_tp.uid !='') 
     
     
     # repartition data by uid, all the request belong to the same uid will go to the same partion
@@ -80,28 +71,22 @@ def main():
     df_schema  = df.schema
     df_output1 = sqlContext.createDataFrame(list_of_requests, schema = df_schema).cache()
     
-    df_output2 = df_tp.where(df_tp.sl_adjusted_confidence < 94).cache()
+    #df_output2 = df_tp.where(df_tp.sl_adjusted_confidence < 94).cache()
     
-    df_final = df_output1.unionAll(df_output2).cache()
+    #df_final = df_output1.unionAll(df_output2).cache()
     
     
-    save_as_orc_fp(df_tp, year, month, day, hour, log_type, country)
+    save_as_orc_fp(df_output1, year, month, day, hour, log_type, country,partitions)
     
     df_rest = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_re).cache()
-    save_as_orc_rest(df_rest, year, month, day, hour, log_type, country)  
-
-
-def speed(pre, cur):
     
-    distance = miles(pre, cur)
-    if int(cur[2]) - int(pre[2]) != 0:            
-        speed = distance / (int(cur[2]) - int(pre[2])) * 1000 * 60 * 60
-    elif int(cur[2]) - int(pre[2]) == 0 and distance < 2:
-        speed = 0
-    else:
-        speed = 100000000
+    save_as_orc_rest(df_rest, year, month, day, hour, log_type, country,partitions)  
 
-    return speed        
+    df_output1.unpersist()
+    df_rest.unpersist()
+
+
+  
 
 def miles (pre, cur):
     R = 6373.0
@@ -242,6 +227,7 @@ def update_r_s_info(cluster_requests, uid_requests):
     return uid_requests
 
 def build_tuples(dic):
+    # the order of the command is the same as the schema, the order can't be changed
     t_list = []
     t_list.append(dic['r_timestamp']) 
     t_list.append(dic['request_id']) 
@@ -412,37 +398,42 @@ def process(iterator):
         return 'error'
 
 
-def save_as_orc_fp(df, year, month, day, hour, log_type, country):
+def save_as_orc_fp(df, year, month, day, hour, log_type, country,partitions):
     
-    fill_status = {'FILLED':'fill','NOT_FILLED':'nf'}
+    fill_status = {'fill':'FILLED','nf':'NOT_FILLED'}
+    
     base_dir = os.path.join('/user',os.environ['USER'], 'tmp', 'ard', 'science_core_ex')
-    date_dir = os.path.join(base_dir,country, year, month, day, hour, log_type)
+    date_dir = os.path.join(base_dir,country, log_type, year, month, day, hour )
+    
+    
+    for fill in fill_status.keys():
+        df0 = df.where(df.request_filled == fill_status[fill]).cache()
+        tll_partition = '-'.join([fill,'tll'])
+        pos_partition = '-'.join([fill,'pos'])
+        if tll_partition in partitions:                
+            path_tll = os.path.join(date_dir, fill,'tll')
+            df1 = df0.where(df0.sl_adjusted_confidence > 94).write.format("orc").save(path_tll)
+            
+        if pos_partition in partitions:
+            path_pos = os.path.join(date_dir, fill,'pos')
+            df2 = df0.where(df0.sl_adjusted_confidence <= 94).write.format("orc").save(path_pos)
+        df0.unpersist()
+                
+def save_as_orc_rest(df, year, month, day, hour, log_type, country,partitions):
+    
+    fill_status = {'fill':'FILLED','nf':'NOT_FILLED'}
+    
+    base_dir = os.path.join('/user',os.environ['USER'], 'tmp', 'ard', 'science_core_ex')
+    date_dir = os.path.join(base_dir,country, log_type, year, month, day, hour )
     
     for fill in fill_status.keys(): 
-        df = df.where(df.request_filled == fill).cache()
-        
-        path_tll = os.path.join(date_dir, fill_status[fill],'tll')
-        df1 = df.where(df.sl_adjusted_confidence > 94).write.format("orc").save(path_tll)
-        
-        path_pos = os.path.join(date_dir, fill_status[fill],'pos')
-        df2 = df.where(df.sl_adjusted_confidence <= 94).write.format("orc").save(path_pos)
-        
-        
+        df0 = df.where(df.request_filled == fill_status[fill]).cache()
+        rest_partition = '-'.join([fill,'rest'])
 
-
-def save_as_orc_rest(df, year, month, day, hour, log_type, country):
-    
-    fill_status = {'FILLED':'fill','NOT_FILLED':'nf'}
-    base_dir = os.path.join('/user',os.environ['USER'], 'tmp', 'ard', 'science_core_ex')
-    date_dir = os.path.join(base_dir,country, year, month, day, hour, log_type)
-    
-    for fill in fill_status.keys(): 
-        df = df.where(df.request_filled == fill)
-        path_rest= os.path.join(date_dir, fill_status[fill],'rest')
-        df1 = df.write.format("orc").save(path_rest)     
-        
-        
-    
+        if rest_partition in partitions:                
+            path_rest = os.path.join(date_dir, fill,'rest')
+            df1 = df0.write.format("orc").save(path_rest)
+        df0.unpersist()
 
 if __name__ == "__main__":
     main()   

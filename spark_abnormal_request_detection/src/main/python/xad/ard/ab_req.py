@@ -15,6 +15,7 @@ import subprocess
 from baseard import BaseArd
 from datetime import datetime
 
+
 from xad.common import dateutil
 from xad.common import hdfs
 from xad.common import system
@@ -68,7 +69,11 @@ class AbnormalRequest(BaseArd):
                 if (daily_status is not None and daily_status == 1 and not self.FORCE):
                     logging.debug("x SKIP: found daily status {} {}".format(daily_key, date))
                     continue
-
+                
+                dates = date.split('-')
+                year = dates[0]
+                month = dates[1]
+                day = dates[2]
                 hour_count = 0
                 for hour in hours:
                     # Check hourly gen status 
@@ -77,48 +82,85 @@ class AbnormalRequest(BaseArd):
                         logging.debug("x SKIP: found hourly status {} {}:{}".format(hourly_key, date, hour))
                         ++hour_count
                         continue
+                     
+                    # Check source (/data/extract) status 
+                    input = self._get_science_core_avro_path(country, logtype, year, month, day, hour)
+                    success_path = os.path.join(input, "fill/tll/_SUCCESS")
+                    avro_partitions = []
+                    if (not hdfs.has(success_path)):
+                        logging.info("x SKIP: MISSING AVRO FILE {}".format(success_path))
+                        break
+                    else:
+                        # Check all the available partitions based on country, logtype, date, hour
+                        # Pass these information to spark 
+                        fill_partitions = ['fill','nf']
+                        loc_score_partitions = ['tll','pos','rest']
+                        for fill in fill_partitions:
+                            for loc_score in loc_score_partitions:
+                                success_partition_path = os.path.join(input, fill, loc_score, "_SUCCESS")
+                                if (hdfs.has(success_partition_path)):
+                                    partition = '-'.join([fill,loc_score])
+                                    avro_partitions.append(partition)
+                    
+                    # Run the Spark command
+                    self.run_spark_cmd(country,logtype,year,month,day,hour,avro_partitions)
 
-                    # Check source (science_core_hrly) status 
-                    # FIXME
-
-                    # Run the Hive command
-                    self.run_spark_cmd(country,logtype,date,hour)
+                    # Check Spark job status
+                    orc_path = self._get_science_core_orc_path(country, logtype, year, month, day, hour)
+                    success_orc_path = os.path.join(orc_path, "fill/tll/_SUCCESS")
+                    orc_partitions = []
+                    if (not hdfs.has(success_orc_path)):
+                        logging.info("x SKIP: MISSING ORC FILE {}".format(success_output_path))
+                        break
+                    else:
+                        # Check all the available partitions based on country, logtype, date, hour
+                        # Pass these information to hive
+                        fill_partitions = ['fill','nf']
+                        loc_score_partitions = ['tll','pos','rest']
+                        for fill in fill_partitions:
+                            for loc_score in loc_score_partitions:
+                                success_partition_path = os.path.join(orc_path, fill, loc_score, "_SUCCESS")
+                                if (hdfs.has(success_partition_path)):
+                                    self.run_hive_cmd(country,logtype,date,year,month,day,hour,fill,loc_score,orc_path)
 
                     # Touch hourly status
                     if (not self.NORUN):
                         self.status_log.addStatus(hourly_key, date + "/" + hour)
                         ++hour_count
 
+                    # Run the Hive command
+                    
+
                 # Touch daily status
                 if (hour_count == 24):
                     self.status_log.addStatus(daily_key, date)
 
 
-    def run_spark_cmd(self,country,logtype,date,hour):
+    def run_spark_cmd(self,country,logtype,year,month,day,hour,avro_partitions):
         """Run Spark command to generate science_core_x"""
         
-        logging.info("Running Spark Command Line......")
+        logging.info("Running Spark Command Line... ...")
          
         queue = self.cfg.get('ard.default.queue')
         spark_path = self.cfg.get('spark.script.process')
         driver_memory = self.cfg.get('spark.default.driver_memory')
+        executor_cores = self.cfg.get('spark.default.executor_cores')
         executor_memory = self.cfg.get('spark.default.executor_memory')
         num_executors = self.cfg.get('spark.default.num_executors')
         packages = self.cfg.get('spark.default.databricks')
         
-        dates = date.split('-')
-        year = dates[0]
-        month = dates[1]
-        day = dates[2]
+        partitions = ','.join(avro_partitions)
         
  
         cmd = ["SPARK_MAJOR_VERSION=2"]
         cmd += ["spark-submit"]
         cmd += ["--master", "yarn"]
         cmd += ["--queue", queue ]
+        cmd += ["--conf", "spark.yarn.executor.memoryOverhead=3000"]
         cmd += ["--driver-memory", driver_memory]
         cmd += ["--executor-memory", executor_memory]
         cmd += ["--num-executors", num_executors]
+        cmd += ["--executor-cores", executor_cores]
         cmd += ["--packages", packages]
         cmd += [spark_path]
         cmd += ["--country", country]
@@ -127,11 +169,122 @@ class AbnormalRequest(BaseArd):
         cmd += ["--month", month]
         cmd += ["--day", day]
         cmd += ["--hour", hour]
+      
+        cmd += ["--partitions",partitions]
 
         cmdStr = " ".join(cmd)
 
         system.execute(cmdStr, self.NORUN)
-        #subprocess.Popen(cmdStr, shell=True)   
+
+    def run_hive_cmd(self,country,logtype,date,year,month,day,hour,fill,loc_score,orc_path):
+
+        logging.info("Running Hive Command Line......")
+        queue = self.cfg.get('ard.default.queue')
+        table_name = self.cfg.get('ard.output.table')
+  
+        hive_query = ''
+        
+        hive_template = Template("\"alter table ${table_name} add partition (cntry='${country}', dt='${dt}', prod_type= '${prod_type}', hour='${hour}', fill='${fill}', loc_score='${loc_score}') location '${path}';\"")      
+        query = hive_template.substitute(table_name = table_name, country = country, dt = date, prod_type = logtype, hour = hour, fill= fill, loc_score = loc_score, path = orc_path)
+        hive_query += query
+        
+        cmd = []
+        cmd = ["beeline"]
+        cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
+        cmd += ["--hiveconf", "tez.queue.name=" + queue]
+        cmd += ["-n", os.environ['USER']]  
+        cmd += ["-e", hive_query]
+        
+        command = ' '.join(cmd)
+        system.execute(command, self.NORUN) 
+        
+    """def run_hive_cmd(self,country,logtype,date,year,month,day,hour,fill,loc_score):
+        #Run Hive command to generate add partitions to Hive Table
+        
+        logging.info("Running Hive Command Line......")
+         
+        queue = self.cfg.get('ard.default.queue')
+        hql_path = self.cfg.get('hive.script.ard-gen-partition')
+        
+        base_dir = self._get_science_core_orc_path(country, logtype, year, month, day, hour)
+        location_path = os.path.join(base_dir,fill,loc_score)
+        country = '\'' + country + '\''
+        logtype = '\'' + logtype + '\''
+        date = '\'' + date + '\''
+        hour = '\'' + hour + '\''
+        fill = '\'' + fill + '\''
+        location_path = '\'' + location_path + '\''
+
+        cmd = ["beeline"]
+        cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
+        cmd += ["--hiveconf", "tez.queue.name=" + queue]
+        cmd += ["-n", os.environ['USER']]  
+        cmd += ["-f", hql_path]
+        cmd += ["--hivevar", '"SCIENCE_CORE_TABLE=' + self.cfg.get('ard.output.table') + '"'] 
+        cmd += ["--hivevar", "\"COUNTRY=" +country +"\""]
+        cmd += ["--hivevar", "\"LOGTYPE=" +logtype+ "\""]
+        cmd += ["--hivevar", "\"DATE=" + date + "\""]
+        cmd += ["--hivevar", "\"HOUR=" + hour + "\""]
+        cmd += ["--hivevar", "\"FILL=" + fill+ "\""]
+        cmd += ["--hivevar", "\"LOC_SCORE=" + loc_score + "\""]
+        cmd += ["--hivevar", "\"PATH=" + location_path+ "\""]
+
+        
+        cmdStr = " ".join(cmd)
+
+        system.execute(cmdStr, self.NORUN) """
+    
+    """def run_hive_cmd(self,country,logtype,date,year,month,day,hour,fill,loc_score,orc_path):
+
+        logging.info("Running Hive Command Line......")
+        queue = self.cfg.get('ard.default.queue')
+        table_name = self.cfg.get('ard.output.table')
+  
+        base_dir = self.cfg.get('proj.hive.tmp.dir')
+        hql_dir = os.path.join(base_dir, country, logtype, year, month, day, hour, fill, loc_score)
+        hql_path = os.path.join(hql_dir, 'hive.hql')
+     
+        touch_dir = ""
+        touch_dir  += "mkdir -p" + " " + hql_dir
+        system.execute(touch_dir, self.NORUN) 
+
+        self.create_hql_file(table_name, country, logtype, date, year, month, day, hour, fill, loc_score, orc_path)
+        
+        cmd = []
+        cmd = ["beeline"]
+        cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
+        cmd += ["--hiveconf", "tez.queue.name=" + queue]
+        cmd += ["-n", os.environ['USER']]  
+        cmd += ["-f", hql_path]
+        
+        command = ' '.join(cmd)
+        system.execute(command, self.NORUN) 
+        
+        del_dir = ""
+        del_dir  += "rm -r" + " " + hql_dir
+        system.execute(touch_dir, self.NORUN)
+        
+
+    def create_hql_file(self,table_name, country, logtype, date, year, month, day, hour, fill, loc_score, orc_path):
+        
+        base_dir = self.cfg.get('proj.hive.tmp.dir')
+        hql_dir = os.path.join(base_dir, country, logtype, year, month, day, hour, fill, loc_score)
+        hql_path = os.path.join(hql_dir,'hive.hql')
+        hql_file = open(hql_path, 'w')
+
+        cmd = ""
+        
+        hive_template = Template("alter table ${table_name} add partition (cntry='${country}', dt='${dt}', prod_type= '${prod_type}', hour='${hour}', fill='${fill}', loc_score='${loc_score}') location '${path}';")
+        
+       
+        query = hive_template.substitute(table_name = table_name, country = country, dt = date, prod_type = logtype, hour = hour, fill= fill, loc_score = loc_score, path = orc_path)
+        cmd += query 
+        cmd += "\n"
+      
+        hql_file.write(cmd)
+        hql_file.close()"""
+        
+ 
 
     #-------------------
     # Helper Functions
@@ -175,5 +328,15 @@ class AbnormalRequest(BaseArd):
         cmd = 'mkdir -p '
         cmd = cmd + dir
         p = subprocess.Popen(cmd, shell = True)
+
+    def _get_science_core_avro_path(self, country, logtype, *entries):
+        """Get path to the AVRO-based science foundation files"""
+        base_dir = self.cfg.get('extract.data.prefix.hdfs')
+        return os.path.join(base_dir, country, logtype, *entries)
+
+    def _get_science_core_orc_path(self, country, logtype, *entries):
+        """Get path to the ORC-based science foundation files"""
+        base_dir = self.cfg.get('orc.data.hdfs')
+        return os.path.join(base_dir, country, logtype, *entries)
 
 

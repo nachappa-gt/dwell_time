@@ -69,6 +69,12 @@ hdfs.model.reducer.dir = $(hdfs.model.dir)/reducer.py
 #-----------------------------
 hive.script.ard-gen = $(proj.hive.dir)/ard-gen.hql
 
+
+#----------------------------
+# Spark Scripts
+#----------------------------
+spark.script.process = $(proj.spark.dir)/ard_process.py
+
 #----------------------------
 # Default/Common Properties
 #-----------------------------

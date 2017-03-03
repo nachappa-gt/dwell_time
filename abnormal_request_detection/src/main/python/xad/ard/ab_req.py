@@ -110,7 +110,6 @@ class AbnormalRequest(BaseArd):
         
         cmd = ["beeline"]
         cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
-        """cmd += ["-u", self.cfg.get('hiveserver.uri.embeded')]"""
         cmd += ["--hiveconf", "tez.queue.name=" + queue]
         cmd += ["-n", 'xad']  #FIXME need to get username from system
         cmd += ["-f", hql_path]
