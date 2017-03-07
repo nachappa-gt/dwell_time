@@ -20,11 +20,6 @@ from xad.common import dateutil
 from xad.common import hdfs
 from xad.common import system
 
-# Huitao's library
-#sys.path.append('/home/xad/sar-optimization/lib/modules/cmnfunc')
-#import cmnfunc
-
-
 class AbnormalRequest(BaseArd):
     """A class for downloading tables from the POI database."""
 
@@ -85,9 +80,9 @@ class AbnormalRequest(BaseArd):
                      
                     # Check source (/data/extract) status 
                     input = self._get_science_core_avro_path(country, logtype, year, month, day, hour)
-                    success_path = os.path.join(input, "fill/tll/_SUCCESS")
+                    #success_path = os.path.join(input, "fill/tll/_SUCCESS")
                     avro_partitions = []
-                    if (not hdfs.has(success_path)):
+                    if (not hdfs.has(input)):
                         logging.info("x SKIP: MISSING AVRO FILE {}".format(success_path))
                         break
                     else:
@@ -105,12 +100,12 @@ class AbnormalRequest(BaseArd):
                     # Run the Spark command
                     self.run_spark_cmd(country,logtype,year,month,day,hour,avro_partitions)
 
-                    # Check Spark job status
+                    # Check Spark job status, if completed, there should be an orc file
                     orc_path = self._get_science_core_orc_path(country, logtype, year, month, day, hour)
-                    success_orc_path = os.path.join(orc_path, "fill/tll/_SUCCESS")
+                    #success_orc_path = os.path.join(orc_path, "fill/tll/_SUCCESS")
                     orc_partitions = []
-                    if (not hdfs.has(success_orc_path)):
-                        logging.info("x SKIP: MISSING ORC FILE {}".format(success_output_path))
+                    if (not hdfs.has(orc_path)):
+                        logging.info("x SKIP: MISSING ORC FILE {}".format(orc_path))
                         break
                     else:
                         # Check all the available partitions based on country, logtype, date, hour
@@ -121,6 +116,7 @@ class AbnormalRequest(BaseArd):
                             for loc_score in loc_score_partitions:
                                 success_partition_path = os.path.join(orc_path, fill, loc_score, "_SUCCESS")
                                 if (hdfs.has(success_partition_path)):
+                                    # Run the Hive command
                                     self.run_hive_cmd(country,logtype,date,year,month,day,hour,fill,loc_score,orc_path)
 
                     # Touch hourly status
@@ -128,7 +124,7 @@ class AbnormalRequest(BaseArd):
                         self.status_log.addStatus(hourly_key, date + "/" + hour)
                         ++hour_count
 
-                    # Run the Hive command
+                    
                     
 
                 # Touch daily status
@@ -140,7 +136,8 @@ class AbnormalRequest(BaseArd):
         """Run Spark command to generate science_core_x"""
         
         logging.info("Running Spark Command Line... ...")
-         
+        
+        # Configurations of the Spark job
         queue = self.cfg.get('ard.default.queue')
         spark_path = self.cfg.get('spark.script.process')
         driver_memory = self.cfg.get('spark.default.driver_memory')
@@ -151,7 +148,8 @@ class AbnormalRequest(BaseArd):
         
         partitions = ','.join(avro_partitions)
         
- 
+        
+        # command to run Spark, abnormal request detection model is built in Spark
         cmd = ["SPARK_MAJOR_VERSION=2"]
         cmd += ["spark-submit"]
         cmd += ["--master", "yarn"]
@@ -177,7 +175,8 @@ class AbnormalRequest(BaseArd):
         system.execute(cmdStr, self.NORUN)
 
     def run_hive_cmd(self,country,logtype,date,year,month,day,hour,fill,loc_score,orc_path):
-
+        
+        # Run Hive command to add partitions into hive table
         logging.info("Running Hive Command Line......")
         queue = self.cfg.get('ard.default.queue')
         table_name = self.cfg.get('ard.output.table')
