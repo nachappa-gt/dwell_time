@@ -163,11 +163,17 @@ class AbnormalRequest(BaseArd):
         queue = self.cfg.get('ard.default.queue')
         spark_path = self.cfg.get('spark.script.process')
         driver_memory = self.cfg.get('spark.default.driver_memory')
-        executor_cores = self.cfg.get('spark.process.executor_cores')
-        executor_memory = self.cfg.get('spark.process.executor_memory')
-        num_executors = self.cfg.get('spark.process.num_executors')
         packages = self.cfg.get('spark.default.databricks')
-  
+        
+        if country == 'us':
+            executor_cores = self.cfg.get('spark.process.executor_cores')
+            executor_memory = self.cfg.get('spark.process.executor_memory')
+            num_executors = self.cfg.get('spark.process.num_executors')
+        else:
+            executor_cores = self.cfg.get('spark.process.executor_cores.other')
+            executor_memory = self.cfg.get('spark.process.executor_memory.other')
+            num_executors = self.cfg.get('spark.process.num_executors.other')
+        
         """Command to run Spark, abnormal request detection model is built in Spark"""
         cmd = ["SPARK_MAJOR_VERSION=2"]
         cmd += ["spark-submit"]
@@ -200,10 +206,16 @@ class AbnormalRequest(BaseArd):
         queue = self.cfg.get('ard.default.queue')
         spark_path = self.cfg.get('spark.script.join')
         driver_memory = self.cfg.get('spark.default.driver_memory')
-        executor_cores = self.cfg.get('spark.join.executor_cores')
-        executor_memory = self.cfg.get('spark.join.executor_memory')
-        num_executors = self.cfg.get('spark.join.num_executors')
         packages = self.cfg.get('spark.default.databricks')
+        
+        if country == 'us':
+            executor_cores = self.cfg.get('spark.join.executor_cores')
+            executor_memory = self.cfg.get('spark.join.executor_memory')
+            num_executors = self.cfg.get('spark.join.num_executors')
+        else:
+             executor_cores = self.cfg.get('spark.join.executor_cores.other')
+            executor_memory = self.cfg.get('spark.join.executor_memory.other')
+            num_executors = self.cfg.get('spark.join.num_executors.other')
         
         avropartitions = ','.join(avro_partitions)
         abdpartitions = ','.join(abd_partitions)
