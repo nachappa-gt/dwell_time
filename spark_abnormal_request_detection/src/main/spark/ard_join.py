@@ -66,8 +66,8 @@ def main():
 def merge_fill(hiveContext,country, logtype, year, month, day, hour, loc_score):
 
     avro_base_dir = '/data/extract'
-    ard_base_dir = '/user/xad/tmp/ard/abnormal_req'
-    output_base_dir = '/user/xad/tmp/ard/data'
+    ard_base_dir = '/prod/ard/abnormal_req'
+    output_base_dir = '/tmp/ard'
     date_path = '/'.join([country, logtype, year, month, day, hour])
 
     locscores = {'tll':'loc_score=95','pos':'loc_score=94'}   
@@ -78,12 +78,12 @@ def merge_fill(hiveContext,country, logtype, year, month, day, hour, loc_score):
     ard_path = os.path.join(ard_base_dir, date_path,'fill=FILLED',locscores[loc_score]) 
     df_ard = hiveContext.read.format("orc").load(ard_path)
             
-    df = df_all.join(df_ard, 'request_id','left_outer').select('r_timestamp', 'request_id', 'pub_id', 'tsrc_id', 'sp_iab_category', 'user_iab_category',
+    df = df_all.join(df_ard, 'request_id','left_outer').drop('r_s_info').select('r_timestamp', 'request_id', 'pub_id', 'tsrc_id', 'sp_iab_category', 'user_iab_category',
     'user_ip', 'city', 'state', 'zip', 'country', 'latitude','longitude', 'sl_adjusted_confidence',
     'sl_json', 'fp_sic', 'fp_brand', 'uid', 'uid_type', 'uid_hash_type', 'age', 'gender', 'carrier',
     'os', 'device_os_version', 'device_make', 'device_model', 'device_year', 'device_type',
     'pub_type', 'bundle', 'sp_user_age', 'sp_user_gender','int_banner','isp', 'too_freq_uid',
-    'banner_size', 'request_filled', 'pub_bid_floor', coalesce(df_all.r_s_info,df_ard.r_s_info1).alias('r_s_info'), 'ad_id', 'campaign_id',
+    'banner_size', 'request_filled', 'pub_bid_floor', col('r_s_info1').alias('r_s_info'), 'ad_id', 'campaign_id',
     'adgroup_id', 'creative_id', 'mslocation_id', 'ad_vendor_id', 'category',
     'matched_user_iab_category', 'matched_sp_iab_category', 'adomain',
     'creative_type', 'rtb_bucket_id', 'neptune_bucket_id', 'd_s_info', 'adv_bid_rates',
@@ -96,13 +96,13 @@ def merge_fill(hiveContext,country, logtype, year, month, day, hour, loc_score):
     'dnt', 'geo_block_id', 'event_count', 'filter_weight')
             
     output_path = os.path.join(output_base_dir, date_path, 'fill', loc_score)
-    df_w = df.write.format("orc").save(output_path)
+    df.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)
 
 def merge_nf(hiveContext,country, logtype, year, month, day, hour, loc_score):
 
     avro_base_dir = '/data/extract'
-    ard_base_dir = '/user/xad/tmp/ard/abnormal_req'
-    output_base_dir = '/user/xad/tmp/ard/data'
+    ard_base_dir = '/prod/ard/abnormal_req'
+    output_base_dir = '/tmp/ard'
     date_path = '/'.join([country, logtype, year, month, day, hour])
 
     locscores = {'tll':'loc_score=95','pos':'loc_score=94'}   
@@ -113,21 +113,21 @@ def merge_nf(hiveContext,country, logtype, year, month, day, hour, loc_score):
     ard_path = os.path.join(ard_base_dir, date_path,'fill=NOT_FILLED',locscores[loc_score]) 
     df_ard = hiveContext.read.format("orc").load(ard_path)
             
-    df = df_all.join(df_ard, 'request_id','left_outer').select('r_timestamp', 'request_id', 'pub_id', 'tsrc_id', 'sp_iab_category', 'user_iab_category',
+    df = df_all.join(df_ard, 'request_id','left_outer').drop('r_s_info').select('r_timestamp', 'request_id', 'pub_id', 'tsrc_id', 'sp_iab_category', 'user_iab_category',
     'user_ip', 'city', 'state', 'zip', 'country', 'latitude','longitude', 'sl_adjusted_confidence',
     'sl_json', 'fp_sic', 'fp_brand', 'uid', 'uid_type', 'uid_hash_type', 'age', 'gender', 'carrier',
     'os', 'device_os_version', 'device_make', 'device_model', 'device_year', 'device_type',
     'pub_type', 'bundle', 'sp_user_age', 'sp_user_gender','int_banner','isp', 'too_freq_uid',
-    'banner_size', 'request_filled', 'pub_bid_floor', coalesce(df_all.r_s_info,df_ard.r_s_info1).alias('r_s_info'),'is_repeated_user','fp_matches', 'connection_type', 'geo_type','app_site_domain',
+    'banner_size', 'request_filled', 'pub_bid_floor', col('r_s_info1').alias('r_s_info'),'is_repeated_user','fp_matches', 'connection_type', 'geo_type','app_site_domain',
     'dnt', 'geo_block_id', 'event_count', 'filter_weight') 
             
     output_path = os.path.join(output_base_dir, date_path, 'nf', loc_score)
-    df_w = df.write.format("orc").save(output_path)
+    df.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)
 
 def save_rest_orc(hiveContext,country, logtype, year, month, day, hour, avro_partitions):
 
     avro_base_dir = '/data/extract'
-    output_base_dir = '/user/xad/tmp/ard/data'
+    output_base_dir = '/tmp/ard'
     date_dir = '/'.join([country, logtype, year, month, day, hour])
     
     fill_status = ['fill','nf']
@@ -137,7 +137,7 @@ def save_rest_orc(hiveContext,country, logtype, year, month, day, hour, avro_par
             avro_path_re = os.path.join(avro_base_dir, date_dir, fill, 'rest')                            
             output_path = os.path.join(output_base_dir, date_dir, fill,'rest')
             df_rest = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_re)
-            df_w = df_rest.write.format("orc").save(output_path)
+            df_rest.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)
 
 if __name__ == "__main__":
     main()  

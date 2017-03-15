@@ -99,7 +99,7 @@ class AbnormalRequest(BaseArd):
                                     avro_partitions.append(partition)
                     
                     """Run the Spark command"""
-
+                    #self.run_spark_orc(country, logtype, year, month, day, hour, avro_partitions)
                     self.run_spark_model(country,logtype,year,month,day,hour)
                     
                     """ Check model outputs status, then pass it to join with orginal data"""
@@ -107,7 +107,7 @@ class AbnormalRequest(BaseArd):
                     #abd_success_path = os.path.join(abd, 'fill=FILLED','loc_score=95')
                     abd_partitions = []
                     if (not hdfs.has(abd)):
-                        logging.info("x SKIP: MISSING AVRO FILE {}".format(abd))
+                        logging.info("x SKIP: MISSING ARD PROCESSING DATA {}".format(abd))
                         break
                     else:
                         """Check all the available partitions based on country, logtype, date, hour
@@ -122,8 +122,11 @@ class AbnormalRequest(BaseArd):
                                     partition = '-'.join([fill,loc_score])
                                     abd_partitions.append(partition)
 
-                    """Join the Spark Dataframe and save as orc file"""
+                    #Join the Spark Dataframe and save as orc file
                     self.run_spark_join(country,logtype,year,month,day,hour,avro_partitions, abd_partitions)
+                    
+                    if (not self.NORUN): 
+                        self.mvHDFS(country, logtype, year, month, day, hour)   
 
                     """Check Spark job status, if completed, there should be an orc file"""
                     orc_path = self._get_science_core_orc_path(country, logtype, year, month, day, hour)
@@ -145,8 +148,9 @@ class AbnormalRequest(BaseArd):
                                     self.run_hive_cmd(country,logtype,date,year,month,day,hour,fill,loc_score,orc_path)
 
                     """Touch hourly status"""
-                    if (not self.NORUN):
+                    if (not self.NORUN):              
                         self.status_log.addStatus(hourly_key, date + "/" + hour)
+                        
                         ++hour_count
 
                 """Touch daily status"""
@@ -156,6 +160,8 @@ class AbnormalRequest(BaseArd):
 
     def run_spark_model(self,country,logtype,year,month,day,hour):
         """Run Spark model to generate abnormal request_id"""
+        if country !='us' and country !='gb':
+            return
         
         logging.info("Running Spark Modeling Command Line... ...")
         
@@ -173,6 +179,7 @@ class AbnormalRequest(BaseArd):
             executor_cores = self.cfg.get('spark.process.executor_cores.other')
             executor_memory = self.cfg.get('spark.process.executor_memory.other')
             num_executors = self.cfg.get('spark.process.num_executors.other')
+
         
         """Command to run Spark, abnormal request detection model is built in Spark"""
         cmd = ["SPARK_MAJOR_VERSION=2"]
@@ -192,6 +199,7 @@ class AbnormalRequest(BaseArd):
         cmd += ["--month", month]
         cmd += ["--day", day]
         cmd += ["--hour", hour]
+        
 
         cmdStr = " ".join(cmd)
 
@@ -199,7 +207,9 @@ class AbnormalRequest(BaseArd):
 
     def run_spark_join(self,country,logtype,year,month,day,hour,avro_partitions, abd_partitions):
         """Run Spark command to generate science_core_ex"""
-        
+        if country !='us' and country !='gb':
+            return
+
         logging.info("Running Spark Join Command Line... ...")
         
         """Configurations of the Spark job"""
@@ -213,7 +223,7 @@ class AbnormalRequest(BaseArd):
             executor_memory = self.cfg.get('spark.join.executor_memory')
             num_executors = self.cfg.get('spark.join.num_executors')
         else:
-             executor_cores = self.cfg.get('spark.join.executor_cores.other')
+            executor_cores = self.cfg.get('spark.join.executor_cores.other')
             executor_memory = self.cfg.get('spark.join.executor_memory.other')
             num_executors = self.cfg.get('spark.join.num_executors.other')
         
@@ -414,5 +424,46 @@ class AbnormalRequest(BaseArd):
         """Get path to the ORC-based science foundation files"""
         base_dir = self.cfg.get('orc.data.hdfs')
         return os.path.join(base_dir, country, logtype, *entries)
+
+    def mvHDFS(self, country, logtype, year, month, day, hour):
+        """Move completed one-hour data from tmp file to data/science_core_ex"""
+        tmp_base_dir = '/tmp/ard'
+        output_base_dir = '/data/science_core_ex'
+        date_path = '/'.join([country, logtype, year, month, day])
+        hour_path = '/'.join([date_path, hour])
+
+        tmp_path = os.path.join(tmp_base_dir, hour_path)
+        output_path = os.path.join(output_base_dir, date_path)
+
+        cmd = []
+        cmd += ['hdfs dfs -mv']
+        cmd += [tmp_path, output_path]
+       
+        cmdStr = ' '.join(cmd)
+        
+        mkdir = []
+        mkdir += ['hdfs dfs -mkdir -p', output_path]
+
+        mkdirCmd = ' ' .join(mkdir)
+        
+        system.execute(mkdirCmd, self.NORUN)
+        system.execute(cmdStr, self.NORUN)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

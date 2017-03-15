@@ -3,7 +3,7 @@
 -- 
 -- Copyright (C) 2017 by xAd, Inc.  All Rights Reserved.
 
-set tez.queue.name = xianglingmeng;
+set tez.queue.name = ard;
 
 ALTER TABLE ${SCIENCE_CORE_TABLE}
         ADD PARTITION (cntry=${COUNRY}, dt=${DATE}, hour=${HOUR}, prod_type=${LOGTYPE},fill=${FILL}, loc_score=${LOC_SCORE})

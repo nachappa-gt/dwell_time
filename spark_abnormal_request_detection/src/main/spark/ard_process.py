@@ -28,13 +28,13 @@ def main():
     parser.add_argument("--month", help="month")
     parser.add_argument("--day", help="day")
     parser.add_argument("--hour", help="hour")    
-    
+    #parser.add_argument("--avro_partitions",help="avro_partitions")
     """Parse the arguments """
     args = parser.parse_args()
     if args.country:
         country = args.country
     if args.logtype:
-        log_type = args.logtype
+        logtype = args.logtype
     if args.year:
         year = args.year
     if args.month:
@@ -43,10 +43,13 @@ def main():
         day = args.day
     if args.hour:
         hour = args.hour
+    """if args.avro_partitions:
+        partitions_str = args.avro_partitions
+        avro_partitions = partitions_str.split(',')"""
     
     """Load tll and pos data, the model will only process this part of data"""
     base_dir = '/data/extract'
-    date_path = '/'.join([country, log_type, year, month, day, hour])
+    date_path = '/'.join([country, logtype, year, month, day, hour])
 
     """Using databricks to load avro data"""
     avro_path_tp = os.path.join(base_dir, date_path, '{fill,nf}/{tll,pos}')  
@@ -60,21 +63,22 @@ def main():
    
     """ Apply the model on each partion"""  
     rdds = df.rdd
-    list_of_requests = rdds.mapPartitions(process)      
+    list_of_requests = rdds.mapPartitions(process)     
     
     """ Create schema for the output"""   
     field = [pst.StructField("request_id", pst.StringType(), True), pst.StructField("r_s_info1", pst.StringType(), True), pst.StructField("loc_score", pst.StringType(), True), pst.StructField("fill", pst.StringType(), True)]
     schema = pst.StructType(field)
 
-    """ Output from model is a list of tuples, covnert tuples back to dataframe"""
+    """Output from model is a list of tuples, covnert tuples back to dataframe"""
     df_ab = sqlContext.createDataFrame(list_of_requests,schema = schema)
 
     """ Save dataframe with partitions"""
-    base_dir_w = os.path.join('/user',os.environ['USER'], 'tmp', 'ard','abnormal_req')
-    path_w = os.path.join(base_dir_w,country, log_type, year, month, day, hour)
-    df_w = df_ab.write.format("orc").partitionBy('fill','loc_score').save(path_w)
+    base_dir_w = os.path.join('/prod','ard','abnormal_req')
+    path_w = os.path.join(base_dir_w,country, logtype, year, month, day, hour)
+    df_ab.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").partitionBy('fill','loc_score').save(path_w)
     
     sc.stop()
+
 
 def miles (pre, cur):
     """Caculate the distance between two latitudes and longitudes"""
@@ -102,9 +106,8 @@ def miles (pre, cur):
 
     return distance    
 
-def speed(pre, cur):
-    
-    distance = miles(pre, cur)
+def speed(distance, pre, cur):
+       
     if int(cur[2]) - int(pre[2]) != 0:            
         speed = distance / (int(cur[2]) - int(pre[2])) * 1000 * 60 * 60
     elif int(cur[2]) - int(pre[2]) == 0 and distance < 2:
@@ -157,19 +160,14 @@ def get_clusters(uid_requests):
                         break
 
                     else:
-                        if miles(cluster, cur_cluster) <= 2:                        
+                        distance = miles(cluster, cur_cluster)
+                        if distance <= 2 or speed(distance, cluster,cur_cluster) <= 100:                        
                             weighted_cluster = flat_kernel_update(cluster,cur_cluster,requests)
                             clusters[i] = [weighted_cluster[0],weighted_cluster[1], cur_cluster[2]]
                             requests[i].append(i)
                             flag = True
                             break
-                        elif miles(cluster, cur_cluster) > 2 and speed(cluster,cur_cluster) <= 100:                        
-                            weighted_cluster = flat_kernel_update(cluster,cur_cluster,requests)
-                            clusters[i] = [weighted_cluster[0],weighted_cluster[1], cur_cluster[2]]
-                            requests[i].append(i)
-                            flag = True
-                            break
-                
+
                 if not flag:
                     clusters.append(cur_cluster)
                     cur_requests = []
@@ -187,15 +185,15 @@ def get_clusters(uid_requests):
 
 def update_r_s_info(cluster_requests, uid_requests):
     """ update the abnormal request tag in r_s_info field"""
-    if len(cluster_requests) == 1:                          
+    """if len(cluster_requests) == 1:                          
         for r in uid_requests:            
-            r['r_s_info'] = '{"abnormal_req":0}'
+            r['r_s_info'] = '{"abnormal_req":0}'"""
 
-    elif len(cluster_requests) >=2:     
+    if len(cluster_requests) >=2:     
         if float(len(cluster_requests[0][1])) / len(cluster_requests[1][1]) > 2.0:                    
-            for i in cluster_requests[0][1]:
+            """for i in cluster_requests[0][1]:
                 r = uid_requests[i]
-                r['r_s_info'] = '{"abnormal_req":0}' 
+                r['r_s_info'] = '{"abnormal_req":0}'"""
                 
             for i in range(1, len(cluster_requests)):
                 for j in cluster_requests[i][1]:
