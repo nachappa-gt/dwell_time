@@ -73,7 +73,7 @@ class AbnormalRequest(BaseArd):
 
                 for hour in hours:
                     """Check hourly gen status""" 
-                    hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
+                    hourly_status = self.status_log.getStatus(daily_key, date + "/" + hour)
                     if (hourly_status is not None and hourly_status == 1 and not self.FORCE):
                         logging.debug("x SKIP: found hourly status {} {}:{}".format(hourly_key, date, hour))
                         ++hour_count
