@@ -50,12 +50,14 @@ class AbnormalRequest(BaseArd):
 
         scx_key_base = self.cfg.get('status_log_local.key.science_core_x')
         daily_tag = self.cfg.get('status_log_local.tag.daily')
-
+        
+        
         """Looping through all combinations"""
         for date in dates:
             for region in regions:
                 (country,logtype) = self.splitRegion(region)
-
+                
+                logging.info("PROCESSING:" + country + ',' + logtype +',' + date)
                 # Check daily status (optional)
                 hourly_key = '/'.join([scx_key_base, country, logtype])
                 daily_key = '/'.join([hourly_key, daily_tag])

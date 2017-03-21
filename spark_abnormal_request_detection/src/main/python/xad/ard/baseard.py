@@ -189,7 +189,7 @@ class BaseArd(OptionContainer):
         return retval
     
 
-    def _get_country_logtypes(self, country, logtypeKey='default.logtypes'):
+    def _get_country_logtypes(self, country, defaultKey='default.logtypes'):
         """Get logtypes associated with a country.  The user may override
            with the command line argument. However, only those that also appear
            in the configuration will be accepted.  Currently no warning for invalid
@@ -197,8 +197,8 @@ class BaseArd(OptionContainer):
         # This is a country-specific logtype key.
         # If it exisits in the configuration, it will override the default values.
         # Otherwise, fall back to the default.
-        key = "{}.{}".format(logtypeKey, country)
-        valid_vals = self.cfg.get_array(key, logtypeKey)
+        countryKey = "{}.{}".format(defaultKey, country)
+        valid_vals = self.cfg.get_array(countryKey, defaultKey)
 
         # Check command-line options.
         if (self.LOGTYPE):

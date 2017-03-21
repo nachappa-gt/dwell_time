@@ -93,7 +93,7 @@ def merge_fill(hiveContext,country, logtype, year, month, day, hour, loc_score):
     'coupon', 'passbook', 'app_store', 'video_start', 'video_end', 'xad_revenue',
     'pub_revenue', 'is_repeated_user', 'tracking_user_agent', 'tracking_user_ip',
     'fp_matches', 'connection_type', 'geo_type', 'app_site_domain',
-    'dnt', 'geo_block_id', 'event_count', 'filter_weight')
+    'dnt', 'geo_block_id', 'event_count', 'filter_weight','parcel_ids')
             
     output_path = os.path.join(output_base_dir, date_path, 'fill', loc_score)
     df.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)
@@ -119,7 +119,7 @@ def merge_nf(hiveContext,country, logtype, year, month, day, hour, loc_score):
     'os', 'device_os_version', 'device_make', 'device_model', 'device_year', 'device_type',
     'pub_type', 'bundle', 'sp_user_age', 'sp_user_gender','int_banner','isp', 'too_freq_uid',
     'banner_size', 'request_filled', 'pub_bid_floor', col('r_s_info1').alias('r_s_info'),'is_repeated_user','fp_matches', 'connection_type', 'geo_type','app_site_domain',
-    'dnt', 'geo_block_id', 'event_count', 'filter_weight') 
+    'dnt', 'geo_block_id', 'event_count', 'filter_weight','parcel_ids') 
             
     output_path = os.path.join(output_base_dir, date_path, 'nf', loc_score)
     df.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)

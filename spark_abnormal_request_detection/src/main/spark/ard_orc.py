@@ -12,7 +12,7 @@ import subprocess
 import pyspark.sql.types as pst
 
 def main():
-    conf = SparkConf().setAppName('ScienceCoreExtension_Join')
+    conf = SparkConf().setAppName('ScienceCoreExtension_orc')
     sc = SparkContext(conf = conf)
 
     sqlContext = SQLContext(sc)
@@ -71,3 +71,5 @@ def save_as_orc(hiveContext,country, logtype, year, month, day, hour, fill, loc_
 
 if __name__ == "__main__":
     main()  
+
+
