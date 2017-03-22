@@ -56,8 +56,7 @@ class AbnormalRequest(BaseArd):
         for date in dates:
             for region in regions:
                 (country,logtype) = self.splitRegion(region)
-                
-                logging.info("PROCESSING:" + country + ',' + logtype +',' + date)
+                               
                 # Check daily status (optional)
                 hourly_key = '/'.join([scx_key_base, country, logtype])
                 daily_key = '/'.join([hourly_key, daily_tag])
@@ -75,6 +74,7 @@ class AbnormalRequest(BaseArd):
 
                 for hour in hours:
                     """Check hourly gen status""" 
+                    logging.info("PROCESSING:" + country + ',' + logtype +',' + date + ',' + hour)
                     hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
                     if (hourly_status is not None and hourly_status == 1 and not self.FORCE):
                         logging.debug("x SKIP: found hourly status {} {}:{}".format(hourly_key, date, hour))
@@ -93,13 +93,15 @@ class AbnormalRequest(BaseArd):
                            Pass these information to spark"""
                         fill_partitions = ['fill','nf']
                         loc_score_partitions = ['tll','pos','rest']
+
                         for fill in fill_partitions:
                             for loc_score in loc_score_partitions:
                                 success_partition_path = os.path.join(avro, fill, loc_score, "_SUCCESS")
                                 if (hdfs.has(success_partition_path)):
                                     partition = '-'.join([fill,loc_score])
                                     avro_partitions.append(partition)
-                    
+                        
+                        
                     """Run the Spark command"""
                     self.run_spark_orc(country, logtype, year, month, day, hour, avro_partitions)
                     self.run_spark_model(country,logtype,year,month,day,hour)
@@ -134,7 +136,6 @@ class AbnormalRequest(BaseArd):
                     """Check Spark job status, if completed, there should be an orc file"""
                     orc_path = self._get_science_core_orc_path(country, logtype, year, month, day, hour)
                     
-                    orc_partitions = []
                     if (not hdfs.has(orc_path)):
                         logging.info("x SKIP: MISSING ORC FILE {}".format(orc_path))
                         break
@@ -162,9 +163,8 @@ class AbnormalRequest(BaseArd):
     def run_spark_orc(self,country,logtype,year,month,day,hour,avro_partitions):
         """Run Spark model to generate abnormal request_id"""
         if country =='us' or country =='gb':
-            return
-        
-        logging.info("Running Spark AVRO TO ORC Command Line... ...")
+            return        
+        logging.info("Running Spark AVRO TO ORC Command Line... ...")        
         
         """Configurations of the Spark job"""
         queue = self.cfg.get('ard.default.queue')
@@ -305,6 +305,7 @@ class AbnormalRequest(BaseArd):
         
         """Run Hive command to add partitions into hive table"""
         logging.info("Running Hive Command Line......")
+        logging.info(str(datetime.now()))
         queue = self.cfg.get('ard.default.queue')
         table_name = self.cfg.get('ard.output.table')
   
