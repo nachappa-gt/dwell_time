@@ -12,7 +12,13 @@ import subprocess
 import pyspark.sql.types as pst
 
 def main():
- 
+    
+    conf = SparkConf().setAppName('ScienceCoreExtension_Model')
+    sc = SparkContext(conf = conf)
+    
+    sqlContext = SQLContext(sc)
+    hiveContext = HiveContext(sc)    
+    
     """ Add arguments in the command to specify the information of the data to process
      such as country, prod_type, dt, fill and loc_score"""
     parser = argparse.ArgumentParser()
@@ -22,7 +28,8 @@ def main():
     parser.add_argument("--month", help="month")
     parser.add_argument("--day", help="day")
     parser.add_argument("--hour", help="hour")    
-    #parser.add_argument("--avro_partitions",help="avro_partitions")
+    parser.add_argument("--avro_hours",help="avro_hours")
+
     """Parse the arguments """
     args = parser.parse_args()
     if args.country:
@@ -37,46 +44,41 @@ def main():
         day = args.day
     if args.hour:
         hour = args.hour
+    if args.avro_hours:
+        hours_str = args.avro_hours
+        avro_hours = hours_str.split(',')
 
+    for hour in avro_hours:
     
-    """if args.avro_partitions:
-        partitions_str = args.avro_partitions
-        avro_partitions = partitions_str.split(',')"""
-    
-    conf = SparkConf().setAppName('ScienceCoreExtension_Model' + '/' +country + '/' + logtype + '/' +day + '/' + hour)
-    sc = SparkContext(conf = conf)
-    
-    sqlContext = SQLContext(sc)
-    hiveContext = HiveContext(sc)
-    """Load tll and pos data, the model will only process this part of data"""
-    base_dir = '/data/extract'
-    date_path = '/'.join([country, logtype, year, month, day, hour])
+        """Load tll and pos data, the model will only process this part of data"""
+        base_dir = '/data/extract'
+        date_path = '/'.join([country, logtype, year, month, day, hour])
 
-    """Using databricks to load avro data"""
-    avro_path_tp = os.path.join(base_dir, date_path, '{fill,nf}/{tll,pos}')  
-    df_tp = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_tp)
-    df = df_tp.where((df_tp.uid !='') & (df_tp.sl_adjusted_confidence >=94))
+        """Using databricks to load avro data"""
+        avro_path_tp = os.path.join(base_dir, date_path, '{fill,nf}/{tll,pos}')  
+        df_tp = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_tp)
+        df = df_tp.where((df_tp.uid !='') & (df_tp.sl_adjusted_confidence >=94))
 
-    """ Repartition data by uid, all the request belong to the same uid will go to the same partion.
-     Sort rdds in each partition by uid and timestamp"""
-    df = df.select('uid', 'request_id','r_timestamp','latitude','longitude','r_s_info','sl_adjusted_confidence','request_filled')
-    df = df.repartition('uid').sortWithinPartitions('uid','r_timestamp')
+        """ Repartition data by uid, all the request belong to the same uid will go to the same partion.
+        Sort rdds in each partition by uid and timestamp"""
+        df = df.select('uid', 'request_id','r_timestamp','latitude','longitude','r_s_info','sl_adjusted_confidence','request_filled')
+        df = df.repartition('uid').sortWithinPartitions('uid','r_timestamp')
    
-    """ Apply the model on each partion"""  
-    rdds = df.rdd
-    list_of_requests = rdds.mapPartitions(process)     
+        """ Apply the model on each partion"""  
+        rdds = df.rdd
+        list_of_requests = rdds.mapPartitions(process)     
     
-    """ Create schema for the output"""   
-    field = [pst.StructField("request_id", pst.StringType(), True), pst.StructField("r_s_info1", pst.StringType(), True), pst.StructField("loc_score", pst.StringType(), True), pst.StructField("fill", pst.StringType(), True)]
-    schema = pst.StructType(field)
+        """ Create schema for the output"""   
+        field = [pst.StructField("request_id", pst.StringType(), True), pst.StructField("r_s_info1", pst.StringType(), True), pst.StructField("loc_score", pst.StringType(), True), pst.StructField("fill", pst.StringType(), True)]
+        schema = pst.StructType(field)
 
-    """Output from model is a list of tuples, covnert tuples back to dataframe"""
-    df_ab = sqlContext.createDataFrame(list_of_requests,schema = schema)
+        """Output from model is a list of tuples, covnert tuples back to dataframe"""
+        df_ab = sqlContext.createDataFrame(list_of_requests,schema = schema)
 
-    """ Save dataframe with partitions"""
-    base_dir_w = os.path.join('/prod','ard','ab_req')
-    path_w = os.path.join(base_dir_w,country, logtype, year, month, day, hour)
-    df_ab.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").partitionBy('fill','loc_score').save(path_w)
+        """ Save dataframe with partitions"""
+        base_dir_w = os.path.join('/prod','ard','abnormal_req')
+        path_w = os.path.join(base_dir_w,country, logtype, year, month, day, hour)
+        df_ab.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").partitionBy('fill','loc_score').save(path_w)
     
     sc.stop()
 
@@ -149,14 +151,14 @@ def get_clusters(uid_requests):
                 cur_cluster = [float(r['latitude']), float(r['longitude']), int(r['r_timestamp'])]
                 flag = False
 
-                for j in range(len(clusters)):
-                    cluster = clusters[j]
+                for i in range(len(clusters)):
+                    cluster = clusters[i]
                     """Compare the location of the current request with all the existing clusters
                      Merge the this request into one of them and update the centroid of the cluster if the distance is small enough. 
                      Otherwise, create a new cluser""" 
                     if cur_cluster[0] == cluster[0] and cur_cluster[1] == cluster[1]:
-                        requests[j].append(i)
-                        clusters[j] = cur_cluster
+                        requests[i].append(i)
+                        clusters[i] = cur_cluster
                         flag = True
                         break
 
@@ -164,8 +166,8 @@ def get_clusters(uid_requests):
                         distance = miles(cluster, cur_cluster)
                         if distance <= 2 or speed(distance, cluster,cur_cluster) <= 100:                        
                             weighted_cluster = flat_kernel_update(cluster,cur_cluster,requests)
-                            clusters[j] = [weighted_cluster[0],weighted_cluster[1], cur_cluster[2]]
-                            requests[j].append(i)
+                            clusters[i] = [weighted_cluster[0],weighted_cluster[1], cur_cluster[2]]
+                            requests[i].append(i)
                             flag = True
                             break
 

@@ -1,5 +1,5 @@
 #
-#  Abnormal Request Detection  (Xiangling)
+Abnormal Request Detection  (Xiangling)
 #
 
 MAILTO=xiangling.meng@xad.com
@@ -11,23 +11,28 @@ MAILTO=xiangling.meng@xad.com
 0 0 * * * xad /usr/sbin/logrotate -s /home/xad/ard/log/logrotate.status /home/xad/ard/config/logrotate.conf > /dev/null 2>&1
 
 # Gen
-00 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-ex --date L3 --country us --logtype exchange --queue ard >> /home/xad/ard/log/gen-us-exchange.log 2>&1
-30 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-disp --date L3 --country us --logtype display,euwest1 --queue ard >> /home/xad/ard/log/gen-us-disp.log 2>&1
+00 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-ex --date L1 --country us --logtype exchange --queue ard >> /home/xad/ard/log/gen-us-exchange.log 2>&1
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-us-disp --date L1 --country us --logtype display,euwest1 --queue ard >> /home/xad/ard/log/gen-us-disp.log 2>&1
 45 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-dr --date L14-4 --country us,gb --logtype display_dr --queue ard >> /home/xad/ard/log/gen-us-dr.log 2>&1
-15 * * * * xad /home/xad/bin/ard gen -d --lock gen-gb --date L3 --country gb --queue ard >> /home/xad/ard/log/gen-gb.log 2>&1
+15 * * * * xad /home/xad/bin/ard gen -d --lock gen-gb --date L1 --country gb --queue ard >> /home/xad/ard/log/gen-gb.log 2>&1
 
-05 * * * * xad /home/xad/bin/ard gen -d --lock gen-am-ca --date L3 --country ca --queue ard >> /home/xad/ard/log/gen-am-ca.log 2>&1
-10 * * * * xad /home/xad/bin/ard gen -d --lock gen-ap1 --date L3 --country cn,jp --queue ard >> /home/xad/ard/log/gen-ap1.log 2>&1 
-15 * * * * xad /home/xad/bin/ard gen -d --lock gen-ap-in --date L3 --country in --queue ard >> /home/xad/ard/log/gen-ap-in.log 2>&1
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-ca --date L1 --country ca --queue ard >> /home/xad/ard/log/gen-ca.log 2>&1
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-cn --date L1 --country cn --queue ard >> /home/xad/ard/log/gen-cn.log 2>&1 
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-jp --date L1 --country jp --queue ard >> /home/xad/ard/log/gen-jp.log 2>&1 
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-in --date L1 --country in --queue ard >> /home/xad/ard/log/gen-in.log 2>&1
 
-20 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-fr-de --date L3 --country fr,de --queue ard >> /home/xad/ard/log/gen-eu-fr-de.log 2>&1
-25 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-it-es --date L3 --country it,es --queue ard >> /home/xad/ard/log/gen-eu-it-es.log 2>&1
-30 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-lu-fi --date L3 --country lu,fi --queue ard >> /home/xad/ard/log/gen-eu-lu-fi.log 2>&1
-35 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-be-se --date L3 --country be,se --queue ard >> /home/xad/ard/log/gen-eu-be-se.log 2>&1
-40 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-no-nl --date L3 --country no,nl --queue ard >> /home/xad/ard/log/gen-eu-no-nl.log 2>&1
-45 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-dk-ch --date L3 --country dk,ch,at--queue ard >> /home/xad/ard/log/gen-eu-dk-ch.log 2>&1
-50 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-at --date L3 --country at--queue ard >> /home/xad/ard/log/gen-eu-at.log 2>&1
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-fr --date L1 --country fr --queue ard >> /home/xad/ard/log/gen-fr.log 2>&1
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-de --date L1 --country de --queue ard >> /home/xad/ard/log/gen-de.log 2>&1
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-it --date L1 --country it --queue ard >> /home/xad/ard/log/gen-it.log 2>&1
+* * * * * xad /home/xad/bin/ard gen -d --lock gen-es --date L1 --country es --queue ard >> /home/xad/ard/log/gen-es.log 2>&1
 
-55 * * * * xad /home/xad/bin/ard gen -d --lock gen-pa --date L3 --country au,nz --queue ard >> /home/xad/ard/log/gen-pa.log 2>&1
+#30 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-lu-fi --date L3 --country lu,fi --queue ard >> /home/xad/ard/log/gen-eu-lu-fi.log 2>&1
+#35 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-be-se --date L3 --country be,se --queue ard >> /home/xad/ard/log/gen-eu-be-se.log 2>&1
+#40 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-no-nl --date L3 --country no,nl --queue ard >> /home/xad/ard/log/gen-eu-no-nl.log 2>&1
+#45 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-dk-ch --date L3 --country dk,ch,at --queue ard >> /home/xad/ard/log/gen-eu-dk-ch.log 2>&1
+#50 * * * * xad /home/xad/bin/ard gen -d --lock gen-eu-at --date L3 --country at --queue ard >> /home/xad/ard/log/gen-eu-at.log 2>&1
+
+#55 * * * * xad /home/xad/bin/ard gen -d --lock gen-pa --date L3 --country au,nz --queue ard >> /home/xad/ard/log/gen-pa.log 2>&1
+
 
 

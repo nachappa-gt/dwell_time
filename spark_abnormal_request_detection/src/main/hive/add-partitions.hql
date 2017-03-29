@@ -6,5 +6,5 @@
 set tez.queue.name = ard;
 
 ALTER TABLE ${SCIENCE_CORE_TABLE}
-        ADD PARTITION (cntry=${COUNRY}, dt=${DATE}, hour=${HOUR}, prod_type=${LOGTYPE},fill=${FILL}, loc_score=${LOC_SCORE})
+        ADD PARTITION IF NOT EXIST(cntry=${COUNRY}, dt=${DATE}, hour=${HOUR}, prod_type=${LOGTYPE},fill=${FILL}, loc_score=${LOC_SCORE})
         LOCATION ${PATH};
