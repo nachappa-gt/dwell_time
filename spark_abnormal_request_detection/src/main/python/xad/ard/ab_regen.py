@@ -20,7 +20,7 @@ from xad.common import dateutil
 from xad.common import hdfs
 from xad.common import system
 
-class AbnormalRequest(BaseArd):
+class ArdRegen(BaseArd):
     """A class for downloading tables from the POI database."""
 
     def __init__(self, cfg, opt, status_log):
@@ -29,7 +29,7 @@ class AbnormalRequest(BaseArd):
         self.status_log = status_log
  
     #------------------------
-    # Processing Hourly Data
+    # Regenerating Hourly Data
     #------------------------
 
     def genHourly(self):
@@ -58,13 +58,13 @@ class AbnormalRequest(BaseArd):
                 (country,logtype) = self.splitRegion(region)
                                
                 # Check daily status (optional)
-                hourly_key = '/'.join([scx_key_base, country, logtype])
+                """hourly_key = '/'.join([scx_key_base, country, logtype])
                 daily_key = '/'.join([hourly_key, daily_tag])
 
                 daily_status = self.status_log.getStatus(daily_key, date)
                 if (daily_status is not None and daily_status == 1 and not self.FORCE):
                     logging.debug("x SKIP: found daily status {} {}".format(daily_key, date))
-                    continue
+                    continue"""
                 
                 dates = date.split('-')
                 year = dates[0]
@@ -74,12 +74,12 @@ class AbnormalRequest(BaseArd):
 
                 for hour in hours:
                     """Check hourly gen status""" 
-                    logging.info("PROCESSING:" + country + ',' + logtype +',' + date + ',' + hour)
-                    hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
+                    logging.info("Regenerating:" + country + ',' + logtype +',' + date + ',' + hour)
+                    """hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
                     if (hourly_status is not None and hourly_status == 1 and not self.FORCE):
                         logging.debug("x SKIP: found hourly status {} {}:{}".format(hourly_key, date, hour))
                         hour_count += 1
-                        continue
+                        continue"""
                      
                     """Check source (/data/extract) status""" 
                     avro = self._get_science_core_avro_path(country, logtype, year, month, day, hour)
@@ -103,7 +103,7 @@ class AbnormalRequest(BaseArd):
                         
                         
                     """Run the Spark command"""
-                    self.run_spark_orc(country, logtype, year, month, day, hour, avro_partitions)
+                    #self.run_spark_orc(country, logtype, year, month, day, hour, avro_partitions)
                     self.run_spark_model(country,logtype,year,month,day,hour)
                     
                     if country == 'us' or country =='gb':
@@ -155,13 +155,13 @@ class AbnormalRequest(BaseArd):
                                     self.run_hive_cmd(country,logtype,date,year,month,day,hour,fill,loc_score,orc_path)
 
                     """Touch hourly status"""
-                    if (not self.NORUN):              
+                    """if (not self.NORUN):              
                         self.status_log.addStatus(hourly_key, date + "/" + hour)                        
-                        hour_count += 1
+                        hour_count += 1"""
 
                 """Touch daily status"""
-                if (hour_count == 24):
-                    self.status_log.addStatus(daily_key, date)
+                """if (hour_count == 24):
+                    self.status_log.addStatus(daily_key, date)"""
 
     def run_spark_orc(self,country,logtype,year,month,day,hour,avro_partitions):
         """Run Spark model to generate abnormal request_id"""
@@ -334,94 +334,6 @@ class AbnormalRequest(BaseArd):
         command = ' '.join(cmd)
         system.execute(command, self.NORUN) 
 
-        
-    """def run_hive_cmd(self,country,logtype,date,year,month,day,hour,fill,loc_score):
-        #Run Hive command to generate add partitions to Hive Table
-        
-        logging.info("Running Hive Command Line......")
-         
-        queue = self.cfg.get('ard.default.queue')
-        hql_path = self.cfg.get('hive.script.ard-gen-partition')
-        
-        base_dir = self._get_science_core_orc_path(country, logtype, year, month, day, hour)
-        location_path = os.path.join(base_dir,fill,loc_score)
-        country = '\'' + country + '\''
-        logtype = '\'' + logtype + '\''
-        date = '\'' + date + '\''
-        hour = '\'' + hour + '\''
-        fill = '\'' + fill + '\''
-        location_path = '\'' + location_path + '\''
-
-        cmd = ["beeline"]
-        cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
-        cmd += ["--hiveconf", "tez.queue.name=" + queue]
-        cmd += ["-n", os.environ['USER']]  
-        cmd += ["-f", hql_path]
-        cmd += ["--hivevar", '"SCIENCE_CORE_TABLE=' + self.cfg.get('ard.output.table') + '"'] 
-        cmd += ["--hivevar", "\"COUNTRY=" +country +"\""]
-        cmd += ["--hivevar", "\"LOGTYPE=" +logtype+ "\""]
-        cmd += ["--hivevar", "\"DATE=" + date + "\""]
-        cmd += ["--hivevar", "\"HOUR=" + hour + "\""]
-        cmd += ["--hivevar", "\"FILL=" + fill+ "\""]
-        cmd += ["--hivevar", "\"LOC_SCORE=" + loc_score + "\""]
-        cmd += ["--hivevar", "\"PATH=" + location_path+ "\""]
-
-        
-        cmdStr = " ".join(cmd)
-
-        system.execute(cmdStr, self.NORUN) """
-    
-    """def run_hive_cmd(self,country,logtype,date,year,month,day,hour,fill,loc_score,orc_path):
-
-        logging.info("Running Hive Command Line......")
-        queue = self.cfg.get('ard.default.queue')
-        table_name = self.cfg.get('ard.output.table')
-  
-        base_dir = self.cfg.get('proj.hive.tmp.dir')
-        hql_dir = os.path.join(base_dir, country, logtype, year, month, day, hour, fill, loc_score)
-        hql_path = os.path.join(hql_dir, 'hive.hql')
-     
-        touch_dir = ""
-        touch_dir  += "mkdir -p" + " " + hql_dir
-        system.execute(touch_dir, self.NORUN) 
-
-        self.create_hql_file(table_name, country, logtype, date, year, month, day, hour, fill, loc_score, orc_path)
-        
-        cmd = []
-        cmd = ["beeline"]
-        cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
-        cmd += ["--hiveconf", "tez.queue.name=" + queue]
-        cmd += ["-n", os.environ['USER']]  
-        cmd += ["-f", hql_path]
-        
-        command = ' '.join(cmd)
-        system.execute(command, self.NORUN) 
-        
-        del_dir = ""
-        del_dir  += "rm -r" + " " + hql_dir
-        system.execute(touch_dir, self.NORUN)
-        
-
-    def create_hql_file(self,table_name, country, logtype, date, year, month, day, hour, fill, loc_score, orc_path):
-        
-        base_dir = self.cfg.get('proj.hive.tmp.dir')
-        hql_dir = os.path.join(base_dir, country, logtype, year, month, day, hour, fill, loc_score)
-        hql_path = os.path.join(hql_dir,'hive.hql')
-        hql_file = open(hql_path, 'w')
-
-        cmd = ""
-        
-        hive_template = Template("alter table ${table_name} add partition (cntry='${country}', dt='${dt}', prod_type= '${prod_type}', hour='${hour}', fill='${fill}', loc_score='${loc_score}') location '${path}';")
-        
-       
-        query = hive_template.substitute(table_name = table_name, country = country, dt = date, prod_type = logtype, hour = hour, fill= fill, loc_score = loc_score, path = orc_path)
-        cmd += query 
-        cmd += "\n"
-      
-        hql_file.write(cmd)
-        hql_file.close()"""
-        
- 
 
     #-------------------
     # Helper Functions
@@ -478,13 +390,13 @@ class AbnormalRequest(BaseArd):
 
     def _get_science_core_orc_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
-        base_dir = self.cfg.get('orc.data.hdfs')
+        base_dir = self.cfg.get('orc.data.hdfs.re')
         return os.path.join(base_dir, country, logtype, *entries)
 
     def mvHDFS(self, country, logtype, year, month, day, hour):
         """Move completed one-hour data from tmp file to data/science_core_ex"""
         tmp_base_dir = '/tmp/ard'
-        output_base_dir = '/data/science_core_ex'
+        output_base_dir = '/data/science_core_ex_new'
         date_path = '/'.join([country, logtype, year, month, day])
         hour_path = '/'.join([date_path, hour])
 

@@ -1,0 +1,24 @@
+## Create the Table of Hivestatus in HIVE
+create external table ard.hiveStatus (id int, time string, key string, year string, month string, day string, hour string, executor_nums string, executor_cores string, executor_memory string)
+row format delimited fields terminated by '\t'
+stored as AVRO
+location '/prod/ard/hivestatus';
+
+## Initialize the hivestatus table in command line
+SPARK_MAJOR_VERSION=2 spark-submit --master yarn --queue ard --driver-memory 4g --executor-memory 4g --num-executors 8 --executor-cores 1 --packages com.databricks:spark-avro_2.11:3.2.0 /home/xad/ard/spark/hivestatus_init.py
+
+
+create table ard.ardStatus (time string, key string, year string, month string, day string, hour string, executor_nums string, executor_cores string, executor_memory string,delta_time double)
+stored as ORC;
+
+
+insert into table ard.ardstatus values('2017-03-25 12:34:23', 'us/exchange', '2017','03','25','12','32','1','4g', 3233);
+
+df = hiveContext.sql('insert into table ard.ardstatus values("2017-03-25 13:33:23","gb/display","2017","03","25","12","32","1","4g", 3233)')
+
+insert into table ard.ardstatus select '2017-03-25 12:34:23', 'fr/exchange', '2017','03','25','12','32','1','4g', 3500;
+
+create table ardStatus (time string, key string, year string, month string, day string, hour string, executor_nums string, executor_cores string, executor_memory string,delta_time double)
+stored as ORC;
+
+hc.sql('select"2017-03-25 13:33:23" as time,"gb/display" as key,"2017" as year,"03" as month,"25" as day,"12" as hour,"32" as executor_nums,"1" as executor_cores,"4g" as executor_memory, 3500.0 as delta_time')

@@ -199,11 +199,23 @@ def update_r_s_info(cluster_requests, uid_requests):
             for i in range(1, len(cluster_requests)):
                 for j in cluster_requests[i][1]:
                     r = uid_requests[j]
-                    r['r_s_info'] = '{"abnormal_req":1}'
+                    if r['r_s_info'] is null or len(r['r_s_info']) == 0:
+                        r['r_s_info'] = '{"abnormal_req":1}'
+                    else:
+                        rsi = r['r_s_info'].strip()
+                        rsi = rsi.rstrip('}')
+                        rsi += ', "abnormal_req":1}'
+                        r['r_s_info'] = rsi                  
 
         else:
-            for r in uid_requests:                        
-                r['r_s_info'] = '{"abnormal_req":2}'            
+            for r in uid_requests: 
+                if r['r_s_info'] is null or len(r['r_s_info']) == 0:                       
+                    r['r_s_info'] = '{"abnormal_req":2}' 
+                else:
+                    rsi = r['r_s_info'].strip()
+                    rsi = rsi.rstrip('}')
+                    rsi += ', "abnormal_req":2}'
+                    r['r_s_info'] = rsi                
                 
     return uid_requests
 
@@ -262,7 +274,7 @@ def process(iterator):
             cluster_request = get_clusters(uid_requests)
             cluster_requests = sorted(cluster_request.items(), key = lambda x:len(x[1]),reverse = True)  
             requests = update_r_s_info(cluster_requests, uid_requests)
-            requests = update_r_s_info(cluster_requests, uid_requests)                
+                           
             for r in requests:
                 r_tuple = build_tuples_s(r)
                 all_requests.append(r_tuple)  

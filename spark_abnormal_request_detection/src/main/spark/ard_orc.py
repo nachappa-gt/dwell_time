@@ -73,28 +73,28 @@ def main():
 
     sc.stop()
 
-"""def addHiveStatus(country, logtype, fill, loc_score, year, month, day, hour, executor_num, core, executor_memory):
+"""def addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, executor_num, core, executor_memory):
     # This function can work in ipython notebook, but doesn't work in the pipeline
-    hiveContext = HiveContext(sc)
+    
     df = hiveContext.sql('select year from xianglingmeng.hivestatus')
-    rom_num = df.count() + 1
-    key = '/'.join([country,logtype,fill,loc_score])
-    timestamp = datetime.now()
+    rom_num = df.count() 
+    key = '/'.join([country,logtype])
+    timestamp = str(datetime.now())
     hiveContext.sql('insert into table xianglingmeng.hivestatus values({},"{}","{}","{}","{}","{}","{}","{}","{}","{}")'.format(row_num,timestamp,key,year,month,day,hour,executor_num,core,executor_memory))"""
 
 """def addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, executor_num, core, executor_memory):
 
     df1 = hiveContext.read.format("com.databricks.spark.avro").load('/prod/ard/hivestatus')
-    schema = df.schema
+    schema = df1.schema
     
-    rom_num = df1.count() 
+    row_num = df1.count() 
     key = '/'.join([country,logtype])
     timestamp = datetime.now()
     
     df2 = sqlContext.createDataFrame([(row_num,str(timestamp),key,year,month,day,hour,executor_num,core,executor_memory)],schema = schema)
 
     df = df1.unionAll(df2)
-    df.write.mode("overwrite").format("com.databricks.spark.avro").save('/prod/ard/hivestatus')"""     
+    df.write.format("com.databricks.spark.avro").mode("overwrite").save('/prod/ard/hivestatus')"""
 
 def save_as_orc(hiveContext,country, logtype, year, month, day, hour, fill, loc_score):
 

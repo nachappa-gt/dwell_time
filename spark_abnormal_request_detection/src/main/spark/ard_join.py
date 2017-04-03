@@ -7,9 +7,12 @@ import argparse
 import logging
 from pyspark.sql.functions import *
 from datetime import datetime 
+import pyspark.sql.types as pst
+
 
 def main():
-
+    
+    starttime = datetime.now()
     """ Add arguments in the command to specify the information of the data to process
      such as country, prod_type, dt, fill and loc_score"""
     parser = argparse.ArgumentParser()
@@ -49,12 +52,8 @@ def main():
     if args.executors_num:
         num_executors = args.executors_num
     if args.exe_cores:
-        executor_cores = args.exe_cores
+        executor_cores = args.exe_cores"""
     
-    executor_memory = args.executor-memory
-    num_executors = args.num-executors
-    executor_cores = args.executor-cores"""
-   
     conf = SparkConf().setAppName('ScienceCoreExtension_Join' + '/' +country + '/' + logtype  + '/' +day + '/' + hour)
     sc = SparkContext(conf = conf)
 
@@ -70,27 +69,53 @@ def main():
             partition = '-'.join([fill, loc_score])
             if partition in abd_partitions and fill == 'fill':
                 merge_fill(hiveContext, country, logtype, year, month, day, hour, loc_score)
-                #addHiveStatus(country, logtype, fill, loc_score, year, month, day, hour, num_executors, executor_cores, executor_memory)
+                #addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, num_executors, executor_cores, executor_memory,starttime)
             if partition in abd_partitions and fill == 'nf':
                 merge_nf(hiveContext, country, logtype, year, month, day, hour, loc_score)
-                #addHiveStatus(country, logtype, fill, loc_score, year, month, day, hour, num_executors, executor_cores, executor_memory)
+                #addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, num_executors, executor_cores, executor_memory,starttime)
             if partition not in abd_partitions and partition in avro_partitions:
                 save_orc(hiveContext, country, logtype, year, month, day, hour, fill,loc_score)
-                #addHiveStatus(country, logtype, fill, loc_score, year, month, day, hour, num_executors, executor_cores, executor_memory)
+                #addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, num_executors, executor_cores, executor_memory,starttime)
 
     save_rest_orc(hiveContext,country, logtype, year, month, day, hour, avro_partitions)
     
     sc.stop()
 
-"""def addHiveStatus(country, logtype, fill, loc_score, year, month, day, hour, executor_num, core, executor_memory):
+"""def addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, executor_num, core, executor_memory,starttime):
+    # This function can work in ipython notebook, but doesn't work in the pipeline
 
-    hiveContext = HiveContext(sc)
+    key = '/'.join([country,logtype])
+    curtime = datetime.now()
+    deltatime = float((curtime - starttime).seconds)
+    #hiveContext.sql('insert into table ard.ardstatus values("{}","{}","{}","{}","{}","{}","{}","{}","{}",{})'.format(str(curtime),key,year,month,day,hour,executor_num,core,executor_memory,deltatime))
+    query = 'select "{}" as time,"{}" as key,"{}" as year,"{}" as month,"{}" as day,"{}" as hour,"{}" as executor_nums,"{}" as executor_cores,"{}" as executor_memory, {} as delta_time'.format(str(curtime),key,year,month,day,hour,executor_num,core,executor_memory,deltatime)
+    
+    df = hiveContext.sql(query)
+    df.write.mode("append").saveAsTable("ardstatus")"""
+   
+"""def addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, executor_num, core, executor_memory):
+    # This function can work in ipython notebook, but doesn't work in the pipeline
+    
     df = hiveContext.sql('select year from xianglingmeng.hivestatus')
-    rom_num = df.count() + 1
-    key = '/'.join([country,logtype,fill,loc_score])
-    timestamp = datetime.now()
+    rom_num = df.count() 
+    key = '/'.join([country,logtype])
+    timestamp = str(datetime.now())
     hiveContext.sql('insert into table xianglingmeng.hivestatus values({},"{}","{}","{}","{}","{}","{}","{}","{}","{}")'.format(row_num,timestamp,key,year,month,day,hour,executor_num,core,executor_memory))"""
 
+"""def addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, executor_num, core, executor_memory):
+
+    df1 = hiveContext.read.format("com.databricks.spark.avro").load('/prod/ard/hivestatus')
+    schema = df1.schema
+    
+    row_num= df1.count() 
+    key = '/'.join([country,logtype])
+    timestamp = datetime.now()
+    
+    df2 = sqlContext.createDataFrame([(row_num,str(timestamp),key,year,month,day,hour,executor_num,core,executor_memory)],schema = schema)
+
+    df = df1.unionAll(df2)
+    
+    df.write.format("com.databricks.spark.avro").mode("overwrite").save('/prod/ard/tmp/hivestatus')"""
 
 def save_orc(hiveContext,country, logtype, year, month, day, hour, fill, loc_score):
 
@@ -206,7 +231,7 @@ def save_rest_orc(hiveContext,country, logtype, year, month, day, hour, avro_par
             df_rest = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_re, schema = schema)
             df_rest.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)
 
-            #addHiveStatus(country, logtype, fill, loc_score, year, month, day, hour, num_executors, executor_cores, executor_memory)
+            #addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, num_executors, executor_cores, executor_memory,starttime)
             
 
 if __name__ == "__main__":

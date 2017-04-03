@@ -122,6 +122,74 @@ s4g2ci:
 	ssh $(S4G2) "sudo yum install -y $(FTP_DIR)/$(PKG_CRON_NAME)-$(VERSION)*.rpm"
 
 
+# SCI4 Gateway 5
+S4G5 = ec2-107-23-108-140.compute-1.amazonaws.com
+g5 s4g5: s4g5p s4g5i
+
+s4g5p:
+	ssh $(S4G5) "if [ ! -d $(FTP_DIR) ]; then mkdir -p $(FTP_DIR); fi"
+	ssh $(S4G5) "rm -f $(FTP_DIR)/$(PKG_NAME)?$(VERSION)*"
+	scp $(PKG_NAME)-$(VERSION)*.rpm $(S4G5):$(FTP_DIR)/
+
+s4g5i:
+	ssh $(S4G5) "sudo yum install -y $(FTP_DIR)/$(PKG_NAME)-$(VERSION)*.rpm"
+
+s4g5c: s4g5cp s4g5ci
+
+s4g5cp s4g5pc:
+	ssh $(S4G5) "if [ ! -d $(FTP_DIR) ]; then mkdir -p $(FTP_DIR); fi"
+	ssh $(S4G5) "rm -f $(FTP_DIR)/$(PKG_CRON_NAME)?$(VERSION)*"
+	scp $(PKG_CRON_NAME)-$(VERSION)*.rpm $(S4G5):$(FTP_DIR)/
+
+s4g5ci s4g5ic:
+	ssh $(S4G5) "sudo yum install -y $(FTP_DIR)/$(PKG_CRON_NAME)-$(VERSION)*.rpm"
+
+
+# SCI4 Gateway 6
+S4G6 = ec2-54-174-153-189.compute-1.amazonaws.com
+g6 s4g6: s4g6p s4g6i
+
+g6p s4g6p:
+	ssh $(S4G6) "if [ ! -d $(FTP_DIR) ]; then mkdir -p $(FTP_DIR); fi"
+	ssh $(S4G6) "rm -f $(FTP_DIR)/$(PKG_NAME)?$(VERSION)*"
+	scp $(PKG_NAME)-$(VERSION)*.rpm $(S4G6):$(FTP_DIR)/
+
+g6i s4g6i:
+	ssh $(S4G6) "sudo yum install -y $(FTP_DIR)/$(PKG_NAME)-$(VERSION)*.rpm"
+
+g6c s4g6c: s4g6cp s4g6ci
+
+g6cp s4g6cp s4g6pc:
+	ssh $(S4G6) "if [ ! -d $(FTP_DIR) ]; then mkdir -p $(FTP_DIR); fi"
+	ssh $(S4G6) "rm -f $(FTP_DIR)/$(PKG_CRON_NAME)?$(VERSION)*"
+	scp $(PKG_CRON_NAME)-$(VERSION)*.rpm $(S4G6):$(FTP_DIR)/
+
+g6ci s4g6ci s4g6ic:
+	ssh $(S4G6) "sudo yum install -y $(FTP_DIR)/$(PKG_CRON_NAME)-$(VERSION)*.rpm"
+
+
+# SCI4 Gateway 7
+S4G7 = ec2-54-197-117-24.compute-1.amazonaws.com
+g7 s4g7: s4g7p s4g7i
+
+g7p s4g7p:
+	ssh $(S4G7) "if [ ! -d $(FTP_DIR) ]; then mkdir -p $(FTP_DIR); fi"
+	ssh $(S4G7) "rm -f $(FTP_DIR)/$(PKG_NAME)?$(VERSION)*"
+	scp $(PKG_NAME)-$(VERSION)*.rpm $(S4G7):$(FTP_DIR)/
+
+g7i s4g7i:
+	ssh $(S4G7) "sudo yum install -y $(FTP_DIR)/$(PKG_NAME)-$(VERSION)*.rpm"
+
+g7c s4g7c: s4g7cp s4g7ci
+
+g7cp s4g7cp s4g7pc:
+	ssh $(S4G7) "if [ ! -d $(FTP_DIR) ]; then mkdir -p $(FTP_DIR); fi"
+	ssh $(S4G7) "rm -f $(FTP_DIR)/$(PKG_CRON_NAME)?$(VERSION)*"
+	scp $(PKG_CRON_NAME)-$(VERSION)*.rpm $(S4G7):$(FTP_DIR)/
+
+g7ci s4g7ci s4g7ic:
+	ssh $(S4G7) "sudo yum install -y $(FTP_DIR)/$(PKG_CRON_NAME)-$(VERSION)*.rpm"
+
 
 
 # Push to S3
