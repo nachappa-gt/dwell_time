@@ -2,12 +2,15 @@
 
 This repository is composed of pipelines that augument the science core data.
 
-## Folders
+## Abnormal Request Detection
 
-* abnormal_request_detection: Hive version (OLD)
+Detect abnormal user location.
 
-* spark_abnormal_request_detection: Spark version.  In production.
+Folders:
 
-* v1.2spark_abnormal_request_detection: latest version Xiangling was working on.
+* ard_spark - spark, production version.
 
+* ard_hive - Old, Hive impementation.
+
+* ard_dev - latest dev version.
 
