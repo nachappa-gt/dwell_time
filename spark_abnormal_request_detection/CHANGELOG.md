@@ -1,3 +1,8 @@
+Release 0.9.62
+--------------
+- Latest code from Xiangling.
+- Date: 2017-04-11
+
 Release 0.9.61
 --------------
 - Fixed sqoop jar issue in HDP-2.5.

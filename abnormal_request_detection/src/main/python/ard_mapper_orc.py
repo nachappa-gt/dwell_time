@@ -19,7 +19,7 @@ def main(separator='\t'):
         # tab-delimited
         
 
-        if request[17] != '' and request[17] != 'APP_AID' and request[17] !='c3ac59b8ed434a4830a65157d4d132d3aab9781f':           
+        if request[17] != '' and request[17] != 'APP_AID' and request[17] != 'c3ac59b8ed434a4830a65157d4d132d3aab9781f':           
             print separator.join(request)
   
 if __name__ == "__main__":

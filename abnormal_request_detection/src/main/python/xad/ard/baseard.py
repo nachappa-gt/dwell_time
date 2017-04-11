@@ -187,7 +187,6 @@ class BaseArd(OptionContainer):
             retval = self.cfg.get_array(key)
         #logging.debug("Countries = {}".format(retval))
         return retval
-    
 
     def _get_country_logtypes(self, country, logtypeKey='default.logtypes'):
         """Get logtypes associated with a country.  The user may override
@@ -208,11 +207,11 @@ class BaseArd(OptionContainer):
             retval = valid_vals
         return retval
 
-    def makeRegion(self, country, logtype, delim='-'):
+    def makeRegion(self, country, logtype, delim='_'):
         """Combine a country and a logtype into a 'region'"""
         return country + delim + logtype
 
-    def splitRegion(self, region, regex='-'):
+    def splitRegion(self, region, regex='_'):
         """Split a region into a country and a logtype"""
         retval = re.split(regex, region); 
         return retval
@@ -223,10 +222,7 @@ class BaseArd(OptionContainer):
         regions = list()
         for c in countries:
             # Get logtypes
-            if (self.LOGTYPE):
-                logtypes = re.split("[,\s]+", self.LOGTYPE)
-            else:
-                logtypes = self._get_country_logtypes(c, logtypeKey)
+            logtypes = self._get_country_logtypes(c, logtypeKey)
             for x in logtypes:
                 # Make regions
                 r = self.makeRegion(c, x)

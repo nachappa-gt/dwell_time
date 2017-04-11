@@ -27,7 +27,7 @@ jar {
 dependencies {
     //compile 'com.xad.common:xad_common:1.9.0'
     //compile 'com.twitter:parquet-pig-bundle:1.6.0'
-    compile 'postgresql:postgresql:9.0-801.jdbc4'
+    //compile 'postgresql:postgresql:9.0-801.jdbc4'
 }
 
 

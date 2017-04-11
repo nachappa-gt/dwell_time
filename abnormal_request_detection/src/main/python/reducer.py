@@ -1,4 +1,4 @@
-
+from itertools import groupby
 from operator import itemgetter
 from math import sin, cos, sqrt, atan2, radians
 import sys
@@ -8,8 +8,7 @@ import sys
 
 def read_mapper_output(file,separator = '\t'):
     for line in file:
-        line.rstrip('\n')
-        if len(line) > 1:            
+        if len(line) > 1:
             yield line.split(separator)
 
 def get_clusters(uid_requests):
@@ -18,24 +17,23 @@ def get_clusters(uid_requests):
     requests = []
     cluster_request = {}
     try:           
-        for i in range(len(uid_requests)): 
-            r = uid_requests[i]             
+        for r in uid_requests:              
             if int(r[5]) < 94:
                 continue
             
             if len(clusters) == 0:
 
-                pre_cluster = [float(r[4]), float(r[5]), int(r[1])] 
+                pre_cluster = [float(r[3]), float(r[4]), int(r[1])] 
                 clusters.append(pre_cluster)
                 pre_requests = []
-                pre_requests.append(i)
+                pre_requests.append(r[2])
                 requests.append(pre_requests)
                 ## save the clusters and corresponding requests in separate list to modify it 
                 ## more easily
         
             else:
 
-                cur_cluster = [float(r[4]), float(r[5]), int(r[1])]
+                cur_cluster = [float(r[3]), float(r[4]), int(r[1])]
                 flag = False
 
                 for i in range(len(clusters)):
@@ -43,7 +41,7 @@ def get_clusters(uid_requests):
                     cluster = clusters[i]
 
                     if cur_cluster[0] == cluster[0] and cur_cluster[1] == cluster[1]:
-                        requests[i].append(i)
+                        requests[i].append(r[2])
                         clusters[i] = cur_cluster
                         flag = True
                         break
@@ -55,19 +53,19 @@ def get_clusters(uid_requests):
                         
                             weighted_cluster = flat_kernel_update(cluster,cur_cluster,requests)
                             clusters[i] = [weighted_cluster[0],weighted_cluster[1], cur_cluster[2]]
-                            requests[i].append(i)
+                            requests[i].append(r[2])
                             flag = True
                             break
                 if not flag:
 
                     clusters.append(cur_cluster)
                     cur_requests = []
-                    cur_requests.append(i)
+                    cur_requests.append(r[2])
                     requests.append(cur_requests)
                                     
-        for j in range(len(clusters)):
+        for i in range(len(clusters)):
 
-            cluster_request[tuple(clusters[j])] = requests[j]
+            cluster_request[tuple(clusters[i])] = requests[i]
         
         return cluster_request
 
@@ -102,87 +100,35 @@ def main(separator='\t'):
             if len(cluster_requests) == 0:
                 
                 for r in uid_requests:
-                    """if len(r[6]) > 0:
-                        r[6] = r[6].rstrip('}')
-                        r[6] = r[6].lstrip('\n')
-                        r[6] += ',' + '"abnormal_request"' + ':}' 
-                    else:
-                        r[6] = '{"abnormal_request":}'"""
-                 
-                    print "%s%s%s%s%s" % (r[2],separator,'',separator,r[6]) 
+                    print "%s%s%s%s%s" % (uid, separator, r[2], separator,'1') 
 
             elif len(cluster_requests) == 1: 
                          
                 for r in uid_requests:
                     if int(r[5]) >= 94:
-                        """if len(r[6]) > 0:
-                            r[6] = r[6].rstrip('}')
-                            r[6] = r[6].lstrip('\n')
-                            r[6] += ',' + '"abnormal_request"' + ':0}' 
-                        else:
-                            r[6] = '{"abnormal_request":0}' """
-                        
-                        print "%s%s%s%s%s" % (r[2],separator,'{"abnormal_req":0}',separator,r[6]) 
+                            print "%s%s%s%s%s" % (uid, separator, r[2], separator,'0') 
                     else:
-                        """if len(r[6]) > 0:
-                            r[6] = r[6].rstrip('}')
-                            r[6] = r[6].lstrip('\n')
-                            r[6] += ',' + '"abnormal_request"' + ':}' 
-                        else:
-                            r[6] = '{"abnormal_request":}'"""
-                        
-                        print "%s%s%s%s%s" % (r[2],separator,'',separator,r[6])
+                            print "%s%s%s%s%s" % (uid, separator, r[2], separator,'1')
 
             else:
                                
                 if float(len(cluster_requests[0][1])) / len(cluster_requests[1][1]) > 2.0:
                     
-                    for i in cluster_requests[0][1]:
-                        r = uid_requests[i]
-                        """if len(r[6]) > 0:
-                            r[6] = r[6].rstrip('}')
-                            r[6] = r[6].lstrip('\n')
-                            r[6] += ',' + '"abnormal_request"' + ':0}' 
-                        else:
-                            r[6] = '{"abnormal_request":0}'"""
-                        
-                        print "%s%s%s%s%s" % (r[2],separator,'{"abnormal_req":0}',separator,r[6])
+                    for r in cluster_requests[0][1]:
+                        print "%s%s%s%s%s" % (uid, separator, r, separator,'0')
 
                     for i in range(1, len(cluster_requests)):
-                        for j in cluster_requests[i][1]:
-                            r = uid_requests[j]
-                            """if len(r[6]) > 0:
-                                r[6] = r[6].rstrip('}')
-                                r[6] = r[6].lstrip('\n')
-                                r[6] += ',' + '"abnormal_request"' + ':1}' 
-                            else:
-                                r[6] = '{"abnormal_request":1}'"""
-                           
-                            print "%s%s%s%s%s" % (r[2],separator,'{"abnormal_req":1}',separator,r[6])
+                        for r in cluster_requests[i][1]:
+                            print "%s%s%s%s%s" % (uid, separator, r, separator,'2')
 
                     for r in uid_requests:
                         if int(r[5]) < 94:
-                            """if len(r[6]) > 0:
-                                r[6] = r[6].rstrip('}')
-                                r[6] = r[6].lstrip('\n')
-                                r[6] += ',' + '"abnormal_request"' + ':}' 
-                            else:
-                                r[6] = '{"abnormal_request":}'"""
-                            
-                            print "%s%s%s%s%s" % (r[2],separator,'',separator,r[6])
+                            print "%s%s%s%s%s" % (uid, separator, r[2], separator,'1')
 
                 else:
 
                     for r in uid_requests:
-                        
-                        """if len(r[6]) > 0:
-                            r[6] = r[6].rstrip('}')
-                            r[6] = r[6].lstrip('\n')
-                            r[6] += ',' + '"abnormal_request"' + ':2}' 
-                        else:
-                            r[6] = '{"abnormal_request":2}'"""
-                        
-                        print "%s%s%s%s%s" % (r[2],separator,'{"abnormal_req":2}',separator,r[6])
+                        print "%s%s%s%s%s" % (uid, separator, r[2], separator,'3')
 
         except ValueError:
             

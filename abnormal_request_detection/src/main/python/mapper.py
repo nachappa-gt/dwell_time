@@ -2,7 +2,6 @@ import sys
 def read_input(file,separator = '\t'):
     for line in file:
         # split the line into words
-        line.rstrip('\n')
         yield line.split(separator)
 
 def main(separator='\t'):
@@ -17,10 +16,10 @@ def main(separator='\t'):
         # tab-delimitedp
         
 
-        if request[17] != '' and request[17] != 'APP_AID' and request[17] != 'c3ac59b8ed434a4830a65157d4d132d3aab9781f':
+        if request[0] != '' and request[0] != 'APP_AID' and request[0] != 'c3ac59b8ed434a4830a65157d4d132d3aab9781f':
         
-            print "%s%s%s%s%s%s%s%s%s%s%s%s%s" % (request[17],separator,request[0],separator,
-            request[1],separator,request[11],separator,request[12],separator,request[13],separator,request[61])
+            print "%s%s%s%s%s%s%s%s%s%s%s" % (request[0],separator,request[1],separator,
+            request[2],separator,request[3],separator,request[4],separator,request[5])
   
 if __name__ == "__main__":
     main()
