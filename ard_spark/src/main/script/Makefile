@@ -5,8 +5,11 @@
 PERL5LIB = .:/home/xad/share/perl5
 
 PYTHON_DIR = ../python
-PY_FILES = $(shell find $(PYTHON_DIR) -name '*.py') 
+SPARK_DIR = ../spark
 
+PY_FILES = \
+	$(shell find $(PYTHON_DIR) -name '*.py') \
+	$(shell find $(SPARK_DIR) -name '*.py') 
 
 # Check perl code
 c: c-py

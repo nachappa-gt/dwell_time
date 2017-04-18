@@ -1,15 +1,22 @@
+"""
+Copyright (C) 2017.  xAd, Inc.  All Rights Reserved.
+
+@author: xiangling
+"""
+
+import argparse
+import json
 import os
+from math import sin, cos, sqrt, atan2, radians
+
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SQLContext 
 from pyspark.sql import HiveContext
-from pyspark.sql import Row
-from operator import itemgetter
-from math import sin, cos, sqrt, atan2, radians
-import sys
-import argparse
-import logging
-import subprocess
 import pyspark.sql.types as pst
+
+#from pyspark.sql import Row
+#from operator import itemgetter
+
 
 def main():
  
@@ -191,32 +198,28 @@ def update_r_s_info(cluster_requests, uid_requests):
             r['r_s_info'] = '{"abnormal_req":0}'"""
 
     if len(cluster_requests) >=2:     
+        # Check if there is a dominant cluster        
         if float(len(cluster_requests[0][1])) / len(cluster_requests[1][1]) > 2.0:                    
-            """for i in cluster_requests[0][1]:
-                r = uid_requests[i]
-                r['r_s_info'] = '{"abnormal_req":0}'"""
-                
+            # The first cluster can have an value of 0.  Skip this for now.
+            abnormal_val = 1
             for i in range(1, len(cluster_requests)):
                 for j in cluster_requests[i][1]:
                     r = uid_requests[j]
-                    if r['r_s_info'] is null or len(r['r_s_info']) == 0:
-                        r['r_s_info'] = '{"abnormal_req":1}'
-                    else:
-                        rsi = r['r_s_info'].strip()
-                        rsi = rsi.rstrip('}')
-                        rsi += ', "abnormal_req":1}'
-                        r['r_s_info'] = rsi                  
-
+                    # Set abnormal type 1
+                    jstr = r['r_s_info'] if (r['r_s_info']) else '{}'
+                    j = json.loads(jstr)
+                    j["abnormal_req"] = abnormal_val
+                    r['r_s_info'] = json.dumps(j)              
+        # Otherwise, it is a different kind of abnoarmal.
         else:
+            abnormal_val = 2
             for r in uid_requests: 
-                if r['r_s_info'] is null or len(r['r_s_info']) == 0:                       
-                    r['r_s_info'] = '{"abnormal_req":2}' 
-                else:
-                    rsi = r['r_s_info'].strip()
-                    rsi = rsi.rstrip('}')
-                    rsi += ', "abnormal_req":2}'
-                    r['r_s_info'] = rsi                
-                
+                # Set abnormal type 2
+                jstr = r['r_s_info'] if (r['r_s_info']) else '{}'
+                j = json.loads(jstr)
+                j["abnormal_req"] = abnormal_val
+                r['r_s_info'] = json.dumps(j)               
+
     return uid_requests
 
 def build_tuples_s(dic):
@@ -233,10 +236,8 @@ def build_tuples_s(dic):
 def process(iterator):
     """ Major function for abnormal request detection model"""
     try:
-        count = 0
         uid_requests = []
         pre_key = ''
-        process = 0
         all_requests = []
         """ Each row in the iterator is one request, it is a row object
          Since they have been sorted by uid and r_timestamp already, we only need to compare the consecutive requests"""
@@ -287,54 +288,4 @@ def process(iterator):
 
 if __name__ == "__main__":
     main()   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

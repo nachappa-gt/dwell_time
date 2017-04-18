@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Copyright (C) 2016.  xAd, Inc.  All Rights Reserved.
+Copyright (C) 2017.  xAd, Inc.  All Rights Reserved.
 
 @author: xiangling
 """
@@ -385,12 +385,12 @@ class ArdRegen(BaseArd):
 
     def _get_abd_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
-        base_dir = self.cfg.get('abd.data.hdfs')
+        base_dir = self.cfg.get('hdfs.prod.abd')
         return os.path.join(base_dir, country, logtype, *entries)
 
     def _get_science_core_orc_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
-        base_dir = self.cfg.get('orc.data.hdfs.re')
+        base_dir = self.cfg.get('hdfs.data.orc')
         return os.path.join(base_dir, country, logtype, *entries)
 
     def mvHDFS(self, country, logtype, year, month, day, hour):
@@ -416,22 +416,5 @@ class ArdRegen(BaseArd):
         
         system.execute(mkdirCmd, self.NORUN)
         system.execute(cmdStr, self.NORUN)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

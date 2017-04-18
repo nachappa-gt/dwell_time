@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2016. xAd, Inc.  All Rights Reserved.
+# Copyright (C) 2016,2017.  xAd, Inc.  All Rights Reserved.
 #
 
 """
@@ -75,13 +75,14 @@ class Dispatcher(BaseArd):
             # ARD
             if (cmdKey == ck.get('gen')):
                 self.AR.genHourly()
+            elif (cmdKey == ck.get('hive')):
+                self.AR.addHivePartition()
             elif (cmdKey == ck.get('clean')):
                 logging.info("# ARD Cleaning... FIXME")
             elif (cmdKey == ck.get('mon')):
                 logging.info("# ARD Monitoring... FIXME")
             elif (cmdKey == ck.get('regen')):
                 self.RE.genHourly()
-
 
             # TEST
             elif (cmdKey == ck.get('test')):

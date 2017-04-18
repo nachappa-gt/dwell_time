@@ -1,3 +1,9 @@
+Release 0.9.63
+--------------
+- Remove hdfs output folder before moving tmp data
+- Use json module to update r_s_info.
+- Date: 2017-04-18
+
 Release 0.9.62
 --------------
 - Latest code from Xiangling.
