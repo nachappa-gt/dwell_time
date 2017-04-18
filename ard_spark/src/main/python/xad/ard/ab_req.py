@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Copyright (C) 2016.  xAd, Inc.  All Rights Reserved.
+Copyright (C) 2017.  xAd, Inc.  All Rights Reserved.
 
 @author: xiangling
 """
@@ -205,7 +205,6 @@ class AbnormalRequest(BaseArd):
         cmd += ["--exe_cores", executor_cores]"""
 
         cmdStr = " ".join(cmd)
-
         system.execute(cmdStr, self.NORUN)
 
 
@@ -231,7 +230,6 @@ class AbnormalRequest(BaseArd):
             executor_memory = self.cfg.get('spark.process.executor_memory.gb')
             num_executors = self.cfg.get('spark.process.num_executors.gb')
 
-        
         """Command to run Spark, abnormal request detection model is built in Spark"""
         cmd = ["SPARK_MAJOR_VERSION=2"]
         cmd += ["spark-submit"]
@@ -251,9 +249,7 @@ class AbnormalRequest(BaseArd):
         cmd += ["--day", day]
         cmd += ["--hour", hour]
         
-
         cmdStr = " ".join(cmd)
-
         system.execute(cmdStr, self.NORUN)
 
     def run_spark_join(self,country,logtype,year,month,day,hour,avro_partitions, abd_partitions):
@@ -306,7 +302,6 @@ class AbnormalRequest(BaseArd):
         cmd += ["--exe_cores", executor_cores]"""
 
         cmdStr = " ".join(cmd)
-
         system.execute(cmdStr, self.NORUN)
 
 
@@ -473,53 +468,30 @@ class AbnormalRequest(BaseArd):
 
     def _get_abd_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
-        base_dir = self.cfg.get('abd.data.hdfs')
+        base_dir = self.cfg.get('hdfs.prod.abd')
         return os.path.join(base_dir, country, logtype, *entries)
 
     def _get_science_core_orc_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
-        base_dir = self.cfg.get('orc.data.hdfs')
+        base_dir = self.cfg.get('hdfs.data.orc')
         return os.path.join(base_dir, country, logtype, *entries)
 
     def mvHDFS(self, country, logtype, year, month, day, hour):
         """Move completed one-hour data from tmp file to data/science_core_ex"""
         tmp_base_dir = '/tmp/ard'
-        output_base_dir = '/data/science_core_ex'
-        date_path = '/'.join([country, logtype, year, month, day])
-        hour_path = '/'.join([date_path, hour])
+        output_base_dir = self.cfg.get('hdfs.data.orc')
+        date_folders = '/'.join([country, logtype, year, month, day])
 
-        tmp_path = os.path.join(tmp_base_dir, hour_path)
-        output_path = os.path.join(output_base_dir, date_path)
+        tmp_path = os.path.join(tmp_base_dir, date_folders, hour)
+        output_dir = os.path.join(output_base_dir, date_folders)
+        output_path = os.path.join(output_dir, hour)
 
-        cmd = []
-        cmd += ['hdfs dfs -mv']
-        cmd += [tmp_path, output_path]
-       
-        cmdStr = ' '.join(cmd)
-        
-        mkdir = []
-        mkdir += ['hdfs dfs -mkdir -p', output_path]
+        # Prepare the output folder
+        if (hdfs.has(output_path)):
+            hdfs.rmrs(output_path)
+        hdfs.mkdirp(output_dir, self.NORUN)
 
-        mkdirCmd = ' ' .join(mkdir)
-        
-        system.execute(mkdirCmd, self.NORUN)
-        system.execute(cmdStr, self.NORUN)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        # Move tmp folder to the destination directory
+        hdfs.mv(tmp_path, output_path, self.NORUN)
 
 
