@@ -1,7 +1,17 @@
 """
+
+This program runs in pyspark.  It does the following:
+1. extract location data from the original science core.
+2. set abnormal_req flag for those that are abnormal.
+3. Save abnormal request data to ORC.
+
+There will be another process after this to join the abnormal data
+with the science core data.
+
 Copyright (C) 2017.  xAd, Inc.  All Rights Reserved.
 
 @author: xiangling
+
 """
 
 import argparse
@@ -16,76 +26,6 @@ import pyspark.sql.types as pst
 
 #from pyspark.sql import Row
 #from operator import itemgetter
-
-
-def main():
- 
-    """ Add arguments in the command to specify the information of the data to process
-     such as country, prod_type, dt, fill and loc_score"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--country", help="country")
-    parser.add_argument("--logtype", help="logtype")
-    parser.add_argument("--year", help="year")
-    parser.add_argument("--month", help="month")
-    parser.add_argument("--day", help="day")
-    parser.add_argument("--hour", help="hour")    
-    #parser.add_argument("--avro_partitions",help="avro_partitions")
-    """Parse the arguments """
-    args = parser.parse_args()
-    if args.country:
-        country = args.country
-    if args.logtype:
-        logtype = args.logtype
-    if args.year:
-        year = args.year
-    if args.month:
-        month = args.month
-    if args.day:
-        day = args.day
-    if args.hour:
-        hour = args.hour
-
-    
-    """if args.avro_partitions:
-        partitions_str = args.avro_partitions
-        avro_partitions = partitions_str.split(',')"""
-    
-    conf = SparkConf().setAppName('ScienceCoreExtension_Model' + '/' +country + '/' + logtype + '/' +day + '/' + hour)
-    sc = SparkContext(conf = conf)
-    
-    sqlContext = SQLContext(sc)
-    hiveContext = HiveContext(sc)
-    """Load tll and pos data, the model will only process this part of data"""
-    base_dir = '/data/extract'
-    date_path = '/'.join([country, logtype, year, month, day, hour])
-
-    """Using databricks to load avro data"""
-    avro_path_tp = os.path.join(base_dir, date_path, '{fill,nf}/{tll,pos}')  
-    df_tp = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_tp)
-    df = df_tp.where((df_tp.uid !='') & (df_tp.sl_adjusted_confidence >=94))
-
-    """ Repartition data by uid, all the request belong to the same uid will go to the same partion.
-     Sort rdds in each partition by uid and timestamp"""
-    df = df.select('uid', 'request_id','r_timestamp','latitude','longitude','r_s_info','sl_adjusted_confidence','request_filled')
-    df = df.repartition('uid').sortWithinPartitions('uid','r_timestamp')
-   
-    """ Apply the model on each partion"""  
-    rdds = df.rdd
-    list_of_requests = rdds.mapPartitions(process)     
-    
-    """ Create schema for the output"""   
-    field = [pst.StructField("request_id", pst.StringType(), True), pst.StructField("r_s_info1", pst.StringType(), True), pst.StructField("loc_score", pst.StringType(), True), pst.StructField("fill", pst.StringType(), True)]
-    schema = pst.StructType(field)
-
-    """Output from model is a list of tuples, covnert tuples back to dataframe"""
-    df_ab = sqlContext.createDataFrame(list_of_requests,schema = schema)
-
-    """ Save dataframe with partitions"""
-    base_dir_w = os.path.join('/prod','ard','ab_req')
-    path_w = os.path.join(base_dir_w,country, logtype, year, month, day, hour)
-    df_ab.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").partitionBy('fill','loc_score').save(path_w)
-    
-    sc.stop()
 
 
 def miles (pre, cur):
@@ -193,14 +133,11 @@ def get_clusters(uid_requests):
 
 def update_r_s_info(cluster_requests, uid_requests):
     """ update the abnormal request tag in r_s_info field"""
-    """if len(cluster_requests) == 1:                          
-        for r in uid_requests:            
-            r['r_s_info'] = '{"abnormal_req":0}'"""
-
+    
     if len(cluster_requests) >=2:     
         # Check if there is a dominant cluster        
         if float(len(cluster_requests[0][1])) / len(cluster_requests[1][1]) > 2.0:                    
-            # The first cluster can have an value of 0.  Skip this for now.
+            # The first cluster can have an value of 0.  hls Skip this for now.
             abnormal_val = 1
             for i in range(1, len(cluster_requests)):
                 for j in cluster_requests[i][1]:
@@ -284,6 +221,82 @@ def process(iterator):
                 
     except ValueError:
         return 'error'
+
+
+def main():
+ 
+    # Add arguments in the command to specify the information of the data to process
+    # such as country, prod_type, dt, fill and loc_score"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--country", help="country")
+    parser.add_argument("--logtype", help="logtype")
+    parser.add_argument("--year", help="year")
+    parser.add_argument("--month", help="month")
+    parser.add_argument("--day", help="day")
+    parser.add_argument("--hour", help="hour")    
+    
+    # Parse the arguments
+    args = parser.parse_args()
+    if args.country:
+        country = args.country
+    if args.logtype:
+        logtype = args.logtype
+    if args.year:
+        year = args.year
+    if args.month:
+        month = args.month
+    if args.day:
+        day = args.day
+    if args.hour:
+        hour = args.hour
+    
+    # Create the contexts
+    appName = os.path.join('ScienceCoreEx', country, logtype, day, hour)
+    conf = SparkConf().setAppName(appName)
+    sc = SparkContext(conf = conf)    
+    sqlContext = SQLContext(sc)
+    hiveContext = HiveContext(sc)
+    
+    # Load tll and pos data, the model will only process this part of data
+    base_dir = '/data/extract'
+    date_path = '/'.join([country, logtype, year, month, day, hour])
+
+    # Using databricks to load avro data
+    avro_path_tp = os.path.join(base_dir, date_path, '{fill,nf}/{tll,pos}')  
+    df_tp = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_tp)
+    df = df_tp.where((df_tp.uid !='') & (df_tp.sl_adjusted_confidence >=94))
+
+    # Select location related fields.
+    # Repartition data by uid, 
+    # All the request belong to the same uid will go to the same partion.
+    # Sort rdds in each partition by uid and timestamp
+    df = df.select('uid', 'request_id','r_timestamp','latitude','longitude',
+                   'r_s_info','sl_adjusted_confidence','request_filled')
+    df = df.repartition('uid').sortWithinPartitions('uid','r_timestamp')
+   
+    # Apply the model on each partion
+    rdds = df.rdd
+    list_of_requests = rdds.mapPartitions(process)     
+    
+    # Create schema for the output
+    field = [pst.StructField("request_id", pst.StringType(), True),
+             pst.StructField("r_s_info1", pst.StringType(), True),
+             pst.StructField("loc_score", pst.StringType(), True),
+             pst.StructField("fill", pst.StringType(), True)]
+    schema = pst.StructType(field)
+
+    # Output from model is a list of tuples, covnert tuples back to dataframe"""
+    df_ab = sqlContext.createDataFrame(list_of_requests, schema = schema)
+
+    # Save dataframe with partitions
+    base_dir_w = os.path.join('/prod','ard','ab_req')
+    path_w = os.path.join(base_dir_w, country, logtype, year, month, day, hour)
+    df_ab.write.mode("overwrite").format("orc") \
+        .option("compression","zlib").mode("overwrite") \
+        .partitionBy('fill','loc_score').save(path_w)
+
+    # Force the spark process to stop.
+    sc.stop()
 
 
 if __name__ == "__main__":

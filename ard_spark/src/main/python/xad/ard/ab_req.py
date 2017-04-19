@@ -89,8 +89,8 @@ class AbnormalRequest(BaseArd):
                         logging.info("x SKIP: MISSING AVRO FILE {}".format(avro))
                         break
                     else:
-                        #Check all the available partitions based on country, logtype, date, hour
-                           #Pass these information to spark
+                        # Check all the available partitions based on country, logtype, date, hour
+                        # Pass these information to spark
                         fill_partitions = ['fill','nf']
                         loc_score_partitions = ['tll','pos','rest']
 
@@ -107,7 +107,7 @@ class AbnormalRequest(BaseArd):
                     self.run_spark_model(country,logtype,year,month,day,hour)
                     
                     if country == 'us' or country =='gb':
-                        #Check model outputs status, then pass it to join with orginal data
+                        # Check model outputs status, then pass it to join with orginal data
                         abd = self._get_abd_path(country, logtype, year, month, day, hour)
                         #abd_success_path = os.path.join(abd, 'fill=FILLED','loc_score=95')
                         abd_partitions = []
@@ -115,8 +115,8 @@ class AbnormalRequest(BaseArd):
                             logging.info("x SKIP: MISSING ARD PROCESSING DATA {}".format(abd))
                             break
                         else:
-                            #Check all the available partitions based on country, logtype, date, hour
-                               #Pass these information to spark
+                            # Check all the available partitions based on country, logtype, date, hour
+                            # Pass these information to spark
                             fills = {'fill':'fill=FILLED','nf':'fill=NOT_FILLED'}
                             locscores = {'tll':'loc_score=95','pos':'loc_score=94'}
     
@@ -127,7 +127,7 @@ class AbnormalRequest(BaseArd):
                                         partition = '-'.join([fill,loc_score])
                                         abd_partitions.append(partition)
 
-                        #Join the Spark Dataframe and save as orc file
+                        # Join the Spark Dataframe and save as orc file
                         if len(abd_partitions) > 0:
                             self.run_spark_join(country,logtype,year,month,day,hour,avro_partitions, abd_partitions)
                         else:
@@ -259,7 +259,7 @@ class AbnormalRequest(BaseArd):
 
         logging.info("Running Spark Join Command Line... ...")
         
-        """Configurations of the Spark job"""
+        # Configurations of the Spark job
         queue = self.cfg.get('ard.default.queue')
         spark_path = self.cfg.get('spark.script.join')
         driver_memory = self.cfg.get('spark.default.driver_memory')
@@ -277,7 +277,7 @@ class AbnormalRequest(BaseArd):
         avropartitions = ','.join(avro_partitions)
         abdpartitions = ','.join(abd_partitions)
         
-        """Command to run Spark, abnormal request detection model is built in Spark"""
+        # Command to run Spark, abnormal request detection model is built in Spark
         cmd = ["SPARK_MAJOR_VERSION=2"]
         cmd += ["spark-submit"]
         cmd += ["--master", "yarn"]
