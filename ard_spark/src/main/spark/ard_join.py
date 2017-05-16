@@ -105,7 +105,9 @@ def save_orc(hiveContext,country, logtype, year, month, day, hour, fill, loc_sco
     schema = df_schema.schema
 
     df = hiveContext.read.format("com.databricks.spark.avro").load(avro_path,schema = schema)
+   
     df.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)
+
     
 def merge_fill(hiveContext,country, logtype, year, month, day, hour, loc_score):
 
@@ -144,7 +146,7 @@ def merge_fill(hiveContext,country, logtype, year, month, day, hour, loc_score):
         'pub_revenue', 'is_repeated_user', 'tracking_user_agent',
         'tracking_user_ip','fp_matches', 'connection_type', 'geo_type',
         'app_site_domain', 'dnt', 'geo_block_id', 'event_count',
-        'filter_weight','parcel_ids', 'matched_poitags')
+        'filter_weight','parcel_ids', 'cookie_uid','matched_poitags')
             
     output_path = os.path.join(output_base_dir, date_path, 'fill', loc_score)
     df.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)
@@ -183,7 +185,7 @@ def merge_nf(hiveContext,country, logtype, year, month, day, hour, loc_score):
     'coupon', 'passbook', 'app_store', 'video_start', 'video_end', 'xad_revenue',
     'pub_revenue', 'is_repeated_user', 'tracking_user_agent', 'tracking_user_ip',
     'fp_matches', 'connection_type', 'geo_type', 'app_site_domain',
-    'dnt', 'geo_block_id', 'event_count', 'filter_weight','parcel_ids',
+    'dnt', 'geo_block_id', 'event_count', 'filter_weight','parcel_ids','cookie_uid',
     'matched_poitags') 
             
     output_path = os.path.join(output_base_dir, date_path, 'nf', loc_score)
