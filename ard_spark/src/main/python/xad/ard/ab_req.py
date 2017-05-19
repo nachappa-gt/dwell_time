@@ -152,7 +152,7 @@ class AbnormalRequest(BaseArd):
                                 success_partition_path = os.path.join(orc_path, fill, loc_score)
                                 if (hdfs.has(success_partition_path)):                                    
                                     """Run the Hive command"""                                    
-                                    self.run_hive_cmd(country,logtype,date,year,month,day,hour,fill,loc_score,orc_path)
+                                    self.run_hive_cmd(country,logtype,date,year,month,day,hour,fill,loc_score,success_partition_path)
 
                     """Touch hourly status"""
                     if (not self.NORUN):              

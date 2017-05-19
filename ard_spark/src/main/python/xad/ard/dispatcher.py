@@ -19,6 +19,7 @@ from xad.common.commandkey import CommandKey
 from xad.common.statuslog import StatusLog
 from xad.ard.ab_req import AbnormalRequest
 from xad.ard.ab_regen import ArdRegen
+from xad.ard.ab_addpar import AddPartition
 from baseard import BaseArd
 
 
@@ -34,6 +35,7 @@ class Dispatcher(BaseArd):
         self.STATUS = StatusLog(cfg, prefix='status_log_local')
         self.AR = AbnormalRequest(cfg, opt.__dict__, self.STATUS)
         self.RE = ArdRegen(cfg, opt.__dict__, self.STATUS)
+        self.AP = AddPartition(cfg, opt.__dict__, self.STATUS)
 
     def run(self):
         """Acquire lock and dispatch commands.
@@ -83,6 +85,8 @@ class Dispatcher(BaseArd):
                 logging.info("# ARD Monitoring... FIXME")
             elif (cmdKey == ck.get('regen')):
                 self.RE.genHourly()
+            elif (cmdKey == ck.get('addpar')):
+                self.AP.genHourly()
 
             # TEST
             elif (cmdKey == ck.get('test')):
