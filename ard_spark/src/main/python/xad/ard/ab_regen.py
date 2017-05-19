@@ -7,18 +7,14 @@ Copyright (C) 2017.  xAd, Inc.  All Rights Reserved.
 
 import logging
 import os
-import re
-import sys
 from string import Template    
-import subprocess
 
 from baseard import BaseArd
 from datetime import datetime
 
-
-from xad.common import dateutil
 from xad.common import hdfs
 from xad.common import system
+
 
 class ArdRegen(BaseArd):
     """A class for downloading tables from the POI database."""
@@ -339,58 +335,9 @@ class ArdRegen(BaseArd):
     # Helper Functions
     #-------------------
 
-    def _getDate(self):
-        """Get today's date"""
-        if (self.DATE):
-            date = self.DATE
-        else:
-            date = dateutil.today()
-        return(date)
-
-    def _getURI(self):
-        """Get the URI for DB connection"""
-        host = self.cfg.get('poidb.conn.host')
-        port = self.cfg.get('poidb.conn.port')
-        dbname = self.cfg.get('poidb.conn.dbname')
-        uri = "jdbc:postgresql://{}:{}/{}".format(host, port, dbname);
-        return (uri)
-
-    def _getHDFSDir(self, entries):
-        """Get the target HDFS directory"""
-        prefix = self.cfg.get('poidb.data.prefix.hdfs')
-        path = os.path.join(prefix, *entries)
-        return(path)
-
-    def _getHDFSTmpDir(self, date):
-        """Get a temporary working directory."""
-        appTmpDir = self.getHDFSUserTmpDir()
-        prefix = self.cfg.get('poidb.tmp.prefix')
-        date = re.sub('-', '', date)  # remove '-'
-        folder = "_".join([prefix, date])
-        path = os.path.join(appTmpDir, folder)
-        return(path)
-
-    def _touch_local_status(args):
-        """Touch the local file for status tracking (NOT USED)"""
-        loggint.info("Generating Local Status File......")
-        dir = 'ard'+'/' + args
-        cmd = 'mkdir -p '
-        cmd = cmd + dir
-        p = subprocess.Popen(cmd, shell = True)
-
-    def _get_science_core_avro_path(self, country, logtype, *entries):
-        """Get path to the AVRO-based science foundation files"""
-        base_dir = self.cfg.get('extract.data.prefix.hdfs')
-        return os.path.join(base_dir, country, logtype, *entries)
-
     def _get_abd_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
         base_dir = self.cfg.get('hdfs.prod.abd')
-        return os.path.join(base_dir, country, logtype, *entries)
-
-    def _get_science_core_orc_path(self, country, logtype, *entries):
-        """Get path to the ORC-based science foundation files"""
-        base_dir = self.cfg.get('hdfs.data.orc')
         return os.path.join(base_dir, country, logtype, *entries)
 
     def mvHDFS(self, country, logtype, year, month, day, hour):
