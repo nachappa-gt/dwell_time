@@ -122,6 +122,8 @@ def merge_fill(hiveContext,country, logtype, year, month, day, hour, loc_score):
     ard_path = os.path.join(ard_base_dir, date_path,'fill=FILLED',locscores[loc_score]) 
     df_ard = hiveContext.read.format("orc").load(ard_path)
         
+    # FIXME: some original r_s_info may get lost with the join.  The logic should be
+    #        r_s_info = (r_s_info1 is not null) ? r_s_info1 : r_s_info.
     df = df_all.join(df_ard, 'request_id','left_outer').drop('r_s_info').select(
         'r_timestamp', 'request_id', 'pub_id', 'tsrc_id', 'sp_iab_category',
         'user_iab_category', 'user_ip', 'city', 'state', 'zip', 'country',
