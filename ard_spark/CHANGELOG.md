@@ -1,3 +1,8 @@
+Release 0.9.65
+--------------
+- Added one command addpar to change the partition location from hour scale to fill/loc_score scale
+- Date: 2017-05-17
+
 Release 0.9.64
 --------------
 - Fixed matched_poitags.
