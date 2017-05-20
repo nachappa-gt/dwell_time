@@ -13,7 +13,6 @@ import sys
 sys.path.append('/home/xad/ard/python')
 sys.path.append('/home/xad/share/python')
 import argparse
-import datetime
 import getpass
 import traceback
 import logging
@@ -108,9 +107,8 @@ def init_logging(opt):
 
     #fmt = ("%(asctime)s:%(name)s %(levelname)s " + "[%(module)s:%(funcName)s] %(message)s")
     #fmt = ("[%(module)s:%(funcName)s] %(levelname)s %(message)s")
-    fmt = ("[%(module)s] %(levelname)s %(message)s")
-    #datefmt = '%m/%d %H:%M:%S'
-    datefmt = '%H:%M:%S'
+    fmt = ("%(asctime)s %(levelname)s [%(module)s.%(funcName)s] %(message)s")
+    datefmt = '%Y-%m-%d %H:%M:%S'
     logging.basicConfig(format=fmt, datefmt=datefmt, level=level)
 
     # IPython specific setting

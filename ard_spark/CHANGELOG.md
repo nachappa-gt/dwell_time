@@ -1,3 +1,10 @@
+Release 1.0.0
+--------------
+- Make it a formal release.
+- Improve addpar performance by combining multiple parttions.
+- Initial cleaning.
+- Date: 2017-05-19
+
 Release 0.9.65
 --------------
 - Added one command addpar to change the partition location from hour scale to fill/loc_score scale

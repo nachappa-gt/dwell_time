@@ -12,9 +12,7 @@ import datetime
 import filelock
 import logging
 import os
-import time
 
-from xad.common.conf import Conf
 from xad.common.commandkey import CommandKey
 from xad.common.statuslog import StatusLog
 from xad.ard.ab_req import AbnormalRequest
