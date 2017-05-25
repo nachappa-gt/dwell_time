@@ -1,3 +1,15 @@
+Release 1.0.2
+--------------
+- Fixed "fixpar" on dealing with empty folders.
+- Date: 2017-05-24
+
+Release 1.0.1
+--------------
+- Handled missing sub-hour partitions.
+- Added "fixpar" command to fix processed hours.
+- Passed HDFS paths to spark scripts.
+- Date: 2017-05-23
+
 Release 1.0.0
 --------------
 - Make it a formal release.

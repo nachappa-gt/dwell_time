@@ -156,7 +156,7 @@ def exceptionHandler(e):
     # Construct the email body and header
     msgArray = [str(e), "", "---", tb]
     email = MIMEText("\n".join(msgArray))
-    email['Subject'] = '[ALERT] ARD-PY ({})'.format(host)
+    email['Subject'] = '[ALERT] ARD ({})'.format(host)
     email['From'] = from_addr
     email['To'] = to_addr
     if (priority != '0'):
