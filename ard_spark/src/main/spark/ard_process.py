@@ -54,6 +54,7 @@ def miles (pre, cur):
 
     return distance    
 
+
 def speed(distance, pre, cur):
        
     if int(cur[2]) - int(pre[2]) != 0:            
@@ -63,6 +64,7 @@ def speed(distance, pre, cur):
     else:
         speed = 100000000
     return speed
+
 
 def flat_kernel_update(pre_cluster, cur_cluster, requests):
     """Update the latitude and longitude of the centroid of a cluster based on the weight ratio"""
@@ -74,6 +76,7 @@ def flat_kernel_update(pre_cluster, cur_cluster, requests):
     lon = sum_lon / total_len
     
     return (lat, lon)
+
 
 def get_clusters(uid_requests):
     """Get the location clusters and corresponding requests with all the requests from one uid"""   
@@ -131,6 +134,7 @@ def get_clusters(uid_requests):
     except ValueError:            
         return 'error'
 
+
 def update_r_s_info(cluster_requests, uid_requests):
     """ update the abnormal request tag in r_s_info field"""
     
@@ -159,6 +163,7 @@ def update_r_s_info(cluster_requests, uid_requests):
 
     return uid_requests
 
+
 def build_tuples_s(dic):
     """Convert the dictionary into a tuple.
     The order of the command is the same as the schema, the order can't be changed"""
@@ -169,6 +174,7 @@ def build_tuples_s(dic):
     t_list.append(dic['request_filled'])
     
     return t_list 
+
 
 def process(iterator):
     """ Major function for abnormal request detection model"""
@@ -230,10 +236,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--country", help="country")
     parser.add_argument("--logtype", help="logtype")
-    parser.add_argument("--year", help="year")
-    parser.add_argument("--month", help="month")
-    parser.add_argument("--day", help="day")
+    parser.add_argument("--date", help="date")
     parser.add_argument("--hour", help="hour")    
+    parser.add_argument("--input_dir", help="input dir")    
+    parser.add_argument("--output_dir", help="outputdir")    
     
     # Parse the arguments
     args = parser.parse_args()
@@ -241,28 +247,24 @@ def main():
         country = args.country
     if args.logtype:
         logtype = args.logtype
-    if args.year:
-        year = args.year
-    if args.month:
-        month = args.month
-    if args.day:
-        day = args.day
+    if args.date:
+        date = args.date
     if args.hour:
         hour = args.hour
+    if args.input_dir:
+        input_dir = args.input_dir
+    if args.output_dir:
+        output_dir = args.output_dir
     
     # Create the contexts
-    appName = os.path.join('ScienceCoreEx', country, logtype, day, hour)
+    appName = os.path.join('ard_process', country, logtype, date, hour)
     conf = SparkConf().setAppName(appName)
     sc = SparkContext(conf = conf)    
     sqlContext = SQLContext(sc)
     hiveContext = HiveContext(sc)
     
-    # Load tll and pos data, the model will only process this part of data
-    base_dir = '/data/extract'
-    date_path = '/'.join([country, logtype, year, month, day, hour])
-
     # Using databricks to load avro data
-    avro_path_tp = os.path.join(base_dir, date_path, '{fill,nf}/{tll,pos}')  
+    avro_path_tp = os.path.join(input_dir, '{fill,nf}/{tll,pos}')  
     df_tp = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_tp)
     df = df_tp.where((df_tp.uid !='') & (df_tp.sl_adjusted_confidence >=94))
 
@@ -289,11 +291,9 @@ def main():
     df_ab = sqlContext.createDataFrame(list_of_requests, schema = schema)
 
     # Save dataframe with partitions
-    base_dir_w = os.path.join('/prod','ard','ab_req')
-    path_w = os.path.join(base_dir_w, country, logtype, year, month, day, hour)
     df_ab.write.mode("overwrite").format("orc") \
         .option("compression","zlib").mode("overwrite") \
-        .partitionBy('fill','loc_score').save(path_w)
+        .partitionBy('fill','loc_score').save(output_dir)
 
     # Force the spark process to stop.
     sc.stop()

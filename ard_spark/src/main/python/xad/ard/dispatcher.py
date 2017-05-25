@@ -32,8 +32,8 @@ class Dispatcher(BaseArd):
         # Create components
         self.STATUS = StatusLog(cfg, prefix='status_log_local')
         self.AR = AbnormalRequest(cfg, opt.__dict__, self.STATUS)
-        self.RE = ArdRegen(cfg, opt.__dict__, self.STATUS)
-        self.AP = AddPartition(cfg, opt.__dict__, self.STATUS)
+        self.REGEN = ArdRegen(cfg, opt.__dict__, self.STATUS)
+        self.ADD_PAR = AddPartition(cfg, opt.__dict__, self.STATUS)
 
     def run(self):
         """Acquire lock and dispatch commands.
@@ -75,16 +75,18 @@ class Dispatcher(BaseArd):
             # ARD
             if (cmdKey == ck.get('gen')):
                 self.AR.genHourly()
-            elif (cmdKey == ck.get('hive')):
-                self.AR.addHivePartition()
+            elif (cmdKey == ck.get('fixpar')):
+                self.AR.fixMissing()
+            elif (cmdKey == ck.get('regen')):
+                self.REGEN.genHourly()
+            elif (cmdKey == ck.get('addpar')):
+                self.ADD_PAR.genHourly()
+
+            # TBD
             elif (cmdKey == ck.get('clean')):
                 logging.info("# ARD Cleaning... FIXME")
             elif (cmdKey == ck.get('mon')):
                 logging.info("# ARD Monitoring... FIXME")
-            elif (cmdKey == ck.get('regen')):
-                self.RE.genHourly()
-            elif (cmdKey == ck.get('addpar')):
-                self.AP.genHourly()
 
             # TEST
             elif (cmdKey == ck.get('test')):

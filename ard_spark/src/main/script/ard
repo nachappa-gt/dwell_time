@@ -31,6 +31,7 @@ MAIN=$PROJ_DIR/python/ard.py
 
 
 PATH=.:/home/xad/bin:$PROJ_DIR/bin:$PROJ_DIR/python:$ANACONDA_HOME/bin:$PATH
+export HADOOP_CLIENT_OPTS="-Djline.terminal=jline.UnsupportedTerminal"
 
 exec python2.7 $MAIN $*
 

@@ -36,7 +36,7 @@ class AddPartition(BaseArd):
         logging.info('Generating Science Core orc files with Abnormal Request...')
 
         """ Get parameters"""
-        dates = self.getDates('ard.process.window')
+        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
         hours = self.getHours()
         regions = self.getRegions()
         #sl_levels = self.getSLLevels()
@@ -54,11 +54,6 @@ class AddPartition(BaseArd):
             for region in regions:
                 (country,logtype) = self.splitRegion(region)
                               
-                dates = date.split('-')
-                year = dates[0]
-                month = dates[1]
-                day = dates[2]
-                # FIXME
                 hour_count = 0
 
                 # Keys for status_log
@@ -73,20 +68,19 @@ class AddPartition(BaseArd):
 
                 for hour in hours:
                     """Check hourly gen status""" 
-                    logging.info("PROCESSING:" + country + ',' + logtype +',' + date + ',' + hour)
+                    logging.info("# PROCESSING: " + country + ',' + logtype +',' + date + ',' + hour)
                     
                     hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
                     
                     if (hourly_status is not None and hourly_status == 1 and not self.FORCE):
-                        logging.debug("x SKIP: found status {}: {} {}".format(hourly_key, date, hour))
+                        logging.debug("x SKIP: found status {}: {},{}".format(hourly_key, date, hour))
                         hour_count += 1
                         continue
 
                     """Check Spark job status, if completed, there should be an orc file"""
-                    hourly_path = self._get_science_core_orc_path(country, logtype, year, month, day, hour)
+                    hourly_path = self._get_science_core_orc_path(country, logtype, date, hour)
                     subparts = self.getSubHourPartitions(hourly_path)
                     
-                    # FIXME
                     if (len(subparts) == 0):
                         logging.info("x SKIP: MISSING ORC FILE {}".format(hourly_path))
                         continue
@@ -97,11 +91,11 @@ class AddPartition(BaseArd):
                                                subparts, hourly_path)
 
                     if (not self.NORUN): 
-                        logging.info("Add status {}: {} {}".format(hourly_key, date, hour))           
+                        logging.info("Add status {}: {},{}".format(hourly_key, date, hour))           
                         self.status_log.addStatus(hourly_key, date + "/" + hour) 
                         hour_count += 1
    
-                # FIXME - add daily k ey
+                # add daily k ey
                 if (hour_count == 24):
                     logging.info("Add daily status {}: {}".format(daily_key, date))           
                     self.status_log.addStatus(daily_key, date) 

@@ -11,33 +11,45 @@ Copyright (C) 2017.  xAd, Inc.  All Rights Reserved.
 import os
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import HiveContext
-#from pyspark.sql import Row
-#from operator import itemgetter
-#from math import sin, cos, sqrt, atan2, radians
-#import sys
 import argparse
-#import logging
-#import subprocess
-#import pyspark.sql.types as pst
-#from datetime import datetime
 
 
-def main():
-     
+def save_as_orc(hiveContext,country, logtype, date, hour, fill, loc_score,
+                input_dir, output_dir):
+    """Save as ORC
+    
+    Will skip if the dataframe is empty.
+
+    FIXME: this is a duplicated function (another one in ard_join).
+    Remove duplication.
+    """
+
+    avro_path = os.path.join(input_dir, fill, loc_score)                            
+    output_path = os.path.join(output_dir, fill, loc_score)
+
+    # Load an empty avro file that has the full schema
+    df_schema = hiveContext.read.format("com.databricks.spark.avro").load('/prod/ard/schema')
+    schema = df_schema.schema
+
+    df = hiveContext.read.format("com.databricks.spark.avro").load(avro_path, schema=schema)
+    if not df.rdd.isEmpty:
+        df.write.mode("overwrite").format("orc").\
+            option("compression","zlib").\
+            mode("overwrite").save(output_path)
+
+
+def main():     
 
     #Add arguments in the command to specify the information of the data to process
     #such as country, prod_type, dt, fill and loc_score
     parser = argparse.ArgumentParser()
     parser.add_argument("--country", help="country")
     parser.add_argument("--logtype", help="logtype")
-    parser.add_argument("--year", help="year")
-    parser.add_argument("--month", help="month")
-    parser.add_argument("--day", help="day")
+    parser.add_argument("--date", help="date")
     parser.add_argument("--hour", help="hour")
     parser.add_argument("--avro_partitions",help="avro_partitions")
-    parser.add_argument("--executor_mem",help="executor_memory")
-    parser.add_argument("--executors_num",help="num_executors")
-    parser.add_argument("--exe_cores",help="executor_cores")
+    parser.add_argument("--input_dir", help="input dir")
+    parser.add_argument("--output_dir", help="output dir")
    
     #Parse the arguments 
     args = parser.parse_args()
@@ -45,51 +57,31 @@ def main():
         country = args.country
     if args.logtype:
         logtype = args.logtype
-    if args.year:
-        year = args.year
-    if args.month:
-        month = args.month
-    if args.day:
-        day = args.day
+    if args.date:
+        date = args.date
     if args.hour:
         hour = args.hour
     if args.avro_partitions:
         partitions_str = args.avro_partitions
-        avro_partitions = partitions_str.split(',')    
+        sub_parts = [ x.split('-') for x in partitions_str.split(',') ]    
+    if args.input_dir:
+        input_dir = args.input_dir
+    if args.output_dir:
+        output_dir = args.output_dir
     
-    fill_status = ['fill', 'nf']
-    locscore_status = ['tll', 'pos','rest']
-
-    conf = SparkConf().setAppName('ScienceCoreExtension_orc' + '/' +country + '/' + logtype  + '/' +day + '/' + hour)
+    app_name = "ard_orc {}/{}/{}/{}".format(country, logtype, date, hour)
+    conf = SparkConf().setAppName(app_name)
     sc = SparkContext(conf = conf)
 
 #    sqlContext = SQLContext(sc)
     hiveContext = HiveContext(sc)
 
-    for fill in fill_status:
-        for loc_score in locscore_status:
-            partition = '-'.join([fill, loc_score])
-            if partition in avro_partitions:                
-                save_as_orc(hiveContext,country, logtype, year, month, day, hour,fill,loc_score)                
-    #addHiveStatus(sqlContext,hiveContext,country, logtype, year, month, day, hour, num_executors, executor_cores, executor_memory)
+    for p in sub_parts:
+        fill, loc_score = p
+        save_as_orc(hiveContext, country, logtype, date, hour, fill, loc_score,
+                    input_dir, output_dir)                
 
     sc.stop()
-
-
-def save_as_orc(hiveContext,country, logtype, year, month, day, hour, fill, loc_score):
-
-    avro_base_dir = '/data/extract'
-    output_base_dir = '/tmp/ard'
-    date_dir = '/'.join([country, logtype, year, month, day, hour])
-
-    avro_path = os.path.join(avro_base_dir, date_dir, fill, loc_score)                            
-    output_path = os.path.join(output_base_dir, date_dir, fill, loc_score)
-
-    df_schema = hiveContext.read.format("com.databricks.spark.avro").load('/prod/ard/schema')
-    schema = df_schema.schema
-
-    df = hiveContext.read.format("com.databricks.spark.avro").load(avro_path, schema=schema)
-    df.write.mode("overwrite").format("orc").option("compression","zlib").mode("overwrite").save(output_path)
 
 
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ from xad.common import system
 
 
 FILL_FOLDERS = set(['fill', 'nf'])
+FILL_FOLDERS_DR = set(['nf'])
 LOC_SCORE_FOLDERS = set(['tll', 'pos', 'rest'])
 
 
@@ -82,14 +83,24 @@ class BaseArd(OptionContainer):
 
 
     def _get_science_core_avro_path(self, country, logtype, *entries):        
-        base_dir = self.cfg.get('extract.data.prefix.hdfs')        
+        base_dir = self.cfg.get('hdfs.data.extract')        
         return os.path.join(base_dir, country, logtype, *entries)
 
 
     def _get_science_core_orc_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
-        base_dir = self.cfg.get('orc.data.hdfs')
+        base_dir = self.cfg.get('hdfs.data.orc')
         return os.path.join(base_dir, country, logtype, *entries)
+
+
+    def _get_abd_path(self, country, logtype, *entries):
+        base_dir = self.cfg.get('hdfs.prod.abd')
+        return os.path.join(base_dir, country, logtype, *entries)
+
+    def _get_tmp_path(self, country, logtype, *entries):
+        base_dir = '/tmp/ard'        
+        folder = os.path.join(country, logtype, *entries).replace("/", "_")
+        return os.path.join(base_dir, "WIP_" + folder)        
 
 
     def getCountries(self, key='default.countries'):
@@ -187,7 +198,7 @@ class BaseArd(OptionContainer):
         return re.split('[,\s]+', str)
 
 
-    def getSubHourPartitions(self, hour_path):
+    def getSubHourPartitions(self, hour_path, delim=None, mapper=None, empty=False):
         """Get a list of [fill, loc_score] folders under specified path
         
         Find all available fill/loc_score sub-folder combinations under
@@ -199,31 +210,54 @@ class BaseArd(OptionContainer):
         Arg:
            hour_path Path to an hour folder. E.g.,
                "/data/science_core_ex/us/exchange/2017/05/01/00"
+           delim: partition delimiter.  If Nont, output will be
+               a list of lists.  Otherwise, it will be a list of strings.
+           mapper: for folder name conversion.
+           empty: if True, will accept empty folders (of size=0). Default False.
         
         Return: a list of [fill,loc_score] pair.
         
         Sample output:
            [['fill', 'pos'], ['fill', 'rest'], ['fill', 'tll'],
             ['nf', 'pos'], ['nf', 'rest'], ['nf', 'tll']]
+        Sample output with delim = '-'
+           ['fill-pos', fill-rest', fill-tll', 'nf-pos', 'nf-rest', nf-tll']
         """
-        ls_outputs = hdfs.ls(hour_path + "/*", pwd=True)
+        subparts = []
+
+        outputs = hdfs.du(hour_path + "/*")
 
         # Now collect fill and loc_score entries
-        subparts = []
-        for p in ls_outputs:
-            entries = p.split('/');
+        for p in outputs:
+            folder_size = p[0]            
+            entries = p[1].split('/');
+            if (not empty and folder_size == 0):
+                continue
+    
             if (len(entries) > 2):
-               loc_score = entries[-1]
                fill = entries[-2]
+               loc_score = entries[-1]
+
+               # Apply mapping
+               if (mapper):
+                   if fill in mapper:
+                       fill = mapper[fill]
+                   if loc_score in mapper:
+                       loc_score = mapper[loc_score]
+                   
                if (fill in FILL_FOLDERS and loc_score in LOC_SCORE_FOLDERS):
-                   subparts.append([fill, loc_score])
+                   pair = [fill,loc_score]
+                   subparts.append( delim.join(pair) if delim else pair)
 
         return subparts                
 
 
-    def makeFullSubHourPartitions(self):
+    def makeFullSubHourPartitions(self, hasFill=True, delim=None):
         """Create a complet sub partition list"""
-        return [ [x,y] for x in sorted(FILL_FOLDERS)
+        
+        fill_folders = FILL_FOLDERS if hasFill else FILL_FOLDERS_DR
+        return [ delim.join([x,y]) if delim else [x,y]
+            for x in sorted(fill_folders)
             for y in sorted(LOC_SCORE_FOLDERS)]
 
         
@@ -314,11 +348,12 @@ class BaseArd(OptionContainer):
 
     def runHiveQuery(self, query):
         """Run the specified Hive query"""
+        beeline = self.cfg.get('hive.command')
         uri = self.cfg.get('hiveserver.uri')
         queue = self.QUEUE if self.QUEUE else self.cfg.get('ard.default.queue')
         user = os.environ['USER']
         
-        cmd = "beeline"
+        cmd = beeline
         cmd += " -u \"{}\"".format(uri)
         cmd += " --hiveconf tez.queue.name={}".format(queue)
         cmd += " -n {}".format(user)  
@@ -341,11 +376,114 @@ class BaseArd(OptionContainer):
         self.runHiveQuery(query)
 
 
+    def addMissingHDFSPartitions(self, hour_path, hasFill=None, missing_subparts=None):
+        """Padding empty partitions with empty ORC files
+        
+        Some partitions (like nf/pos) may be missing if the source
+        is empty.  This function will create the partition folder
+        and fill it with _SUCCESS and empty.orc.
+        """
+        empty_folder = self.cfg.get('hdfs.prod.empty.folder')
+        
+        if hasFill is None:
+            hasFill = False if (hour_path.find('display_dr') >= 0) else True        
 
+        if not missing_subparts:
+            missing_subparts = self.findMissingSubHourPartitions(hour_path, hasFill)
+            
+        for part in missing_subparts:
+                fill, loc_score = part
+                fill_path = os.path.join(hour_path, fill)
+                loc_score_path = os.path.join(fill_path, loc_score)
+
+                # Folder prepartion
+                if hdfs.has(loc_score_path):
+                    hdfs.rmrs(loc_score_path)
+                elif not hdfs.has(fill_path):
+                    hdfs.mkdirp(fill_path, self.NORUN)
+
+                logging.info("Padding empty folder {}".format(loc_score_path))
+                hdfs.cp(empty_folder, loc_score_path, self.NORUN)
+                
+        if (len(missing_subparts) > 0):
+            logging.info("Fixed HDFS Partitions: {}".format(missing_subparts))
+        return missing_subparts;
+
+
+    def findMissingSubHourPartitions(self, hour_path, hasFill=None, empty=False):
+        """Find missing sub-partitions under an hourly path"""
+        
+        delim = '-'
+        avail_set = set(self.getSubHourPartitions(hour_path, delim, empty));
+    
+        if hasFill is None:
+            hasFill = False if (hour_path.find('display_dr') >= 0) else True        
+        full_set = set(self.makeFullSubHourPartitions(hasFill, delim=delim))
+        
+        missing_set = full_set - avail_set
+
+        missing_list = [ x.split(delim) for x in missing_set ]
+        return missing_list
+
+
+    def findMissingPartitions(self, day_path, hasFill=None):
+        """Identify hours that have missing/empty partitions
+
+        Identify all of the missing parts with one hdfs du call.
+        Returns [ [hour, missint-partition-list]]        
+        """
+
+        # Use du to find out the folders and sizes
+        du_outputs = hdfs.du(day_path + "/*/*")
+        
+        # Re-organize the data into t dictionary
+        valid_dict = dict();
+        delim = '-'
+        for x in du_outputs:
+            folder_size, path = x
+            entries = path.split("/")
+            
+            if (folder_size == 0):
+                continue
+            if (entries < 3):
+                continue
+
+            # Get hour and partitions
+            hour = entries[-3]
+            fill = entries[-2]
+            loc_score = entries[-1]
+               
+            if (fill in FILL_FOLDERS and loc_score in LOC_SCORE_FOLDERS):
+                pair = delim.join([fill,loc_score])
+                if (hour in valid_dict):
+                    valid_set = valid_dict[hour]
+                    valid_set.add(pair)
+                else:
+                    valid_dict[hour] = set([pair])
+
+        # Use path to set the hasFill flag
+        if hasFill is None:
+            hasFill = False if (day_path.find('display_dr') >= 0) else True
+            
+        full_set = set(self.makeFullSubHourPartitions(hasFill, delim=delim))
+        full_size = len(full_set)
+        
+        missing_parts = []
+        for hour in sorted(valid_dict.keys()):
+            avail_set = valid_dict[hour]
+            if (len(avail_set) == full_size):
+                continue
+            missing_set = full_set - avail_set
+            missing_list = [ x.split(delim) for x in missing_set ]
+            missing_parts.append( [hour, missing_list] )
+
+        return missing_parts
+            
+        
+        
 #-----------
 # Unit Test
 #-----------
-
 
 def init_logging():
     """Initialize logging"""
@@ -373,18 +511,23 @@ def load_config(conf_file="ard.properties",
 
 
 def _test_sub_hour_partitions(base):
-    """Test getSubHourPartitions"""
-    
+    """Test getSubHourPartitions"""    
     # Some ofthe paths should exist in HDFS for the testing
-    paths = ['/data/extract/us/display/2017/04/25/16',
-             '/data/extract/us/display/2017/04/25/17',
-             '/data/extract/us/display/2017/04/25/18'
-             ]
+    paths = ['/data/science_core_ex/us/display/2017/05/09/03',
+             '/data/science_core_ex/jp/euwest1/2017/05/09/09']
     for path in paths:
-        part_list = base.getSubHourPartitions(path)
-        logging.info("{} => {}".format(path, part_list))
+        part_list = base.getSubHourPartitions(path, empty=True)
+        logging.info("empty=True: {} => {}".format(path, part_list))
+        part_list = base.getSubHourPartitions(path, empty=False)
+        logging.info("empty=False: {} => {}".format(path, part_list))
     
-    
+def _test_findMissingPartitions(base):
+    paths = ['/data/science_core_ex/cn/cnnorth1/2017/05/09/03',
+             '/data/science_core_ex/jp/euwest1/2017/05/09/09']    
+    for path in paths:
+        missing_parts = base.findMissingPartitions(path)
+        logging.info("empty=True: {} => {}".format(path, missing_parts))
+
 def _test_queries(base):
     
     table_name =  base.cfg.get('ard.output.table');
@@ -418,7 +561,8 @@ def main():
     
     # Tests
 #    _test_sub_hour_partitions(base)
-    _test_queries(base)
+    _test_findMissingPartitions(base)
+#    _test_queries(base)
 
     print ("Done!")
 
