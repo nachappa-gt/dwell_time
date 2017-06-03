@@ -32,22 +32,31 @@ class AbnormalRequest(BaseArd):
         """Generate updated Science Core orc table with new features in it. """
         logging.info('Generating Science Core orc files with Abnormal Request...')
 
-        """ Get parameters"""
+        # Get parameters
         dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
         hours = self.getHours()
         regions = self.getRegions()
-        model_countries = set(self.cfg.get_array('ard.model.countries'))
-        #sl_levels = self.getSLLevels()
+        fill_folders = self.getFillFolders()
+        sl_folders = self.getSLFolders()
 
         logging.info("- dates = {}".format(dates))
         logging.info("- hours = [{}]".format(",".join(hours)))
         logging.info("- regions = {}".format(regions))
-        #logging.info("- sl levels = {}".format(sl_levels))      
+        logging.info("- fill folders = {}".format(fill_folders))      
+        logging.info("- sl folders = {}".format(sl_folders))   
+        if (self.NOHIVE):
+            logging.info("- No Run")   
+        if (self.NORUN):
+            logging.info("- No Hive")   
+        if (self.NOSTATUS):
+            logging.info("- No Status Log Update")   
+        if (self.PARTIAL):
+            logging.info("- Partial")   
 
         keyPrefix = self.cfg.get('status_log_local.key.science_core_x')
         daily_tag = self.cfg.get('status_log_local.tag.daily')
                 
-        """Looping through all combinations"""
+        # Looping through all combinations
         for date in dates:
             for region in regions:
                 (country,logtype) = self.splitRegion(region)
@@ -57,17 +66,19 @@ class AbnormalRequest(BaseArd):
                 daily_key = os.path.join(hourly_key, daily_tag)
 
                 daily_status = self.status_log.getStatus(daily_key, date)
-                if (daily_status is not None and daily_status == 1 and not self.FORCE):
+                if (daily_status is not None and daily_status == 1
+                        and not self.FORCE and not self.NOSTATUS):
                     logging.debug("x SKIP: found daily status {} {}".format(daily_key, date))
                     continue
 
                 hour_count = 0
 
                 for hour in hours:
-                    """Check hourly gen status""" 
+                    # Check hourly gen status
                     logging.info("PROCESSING:" + country + ',' + logtype +',' + date + ',' + hour)
                     hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
-                    if (hourly_status is not None and hourly_status == 1 and not self.FORCE):
+                    if (hourly_status is not None and
+                            hourly_status == 1 and not self.FORCE):
                         logging.debug("x SKIP: found hourly status {} {}:{}".format(hourly_key, date, hour))
                         hour_count += 1
                         continue
@@ -79,59 +90,65 @@ class AbnormalRequest(BaseArd):
                         logging.debug("x SKIP: missing source {}".format(avro_path))
                         break                        
 
-                    # Delete previous tmp dir                        
-                    tmp_path = self._get_tmp_path(country, logtype, date, hour)
-                    logging.info("tmp_path = '{}'".format(tmp_path))
-                    if hdfs.has(tmp_path):
-                        hdfs.rmrs(tmp_path)
-
-                    """Run the Spark command"""  
-                    if country in model_countries:
-                        # Generate models
-                        self.run_spark_model(country,logtype, date, hour)
-
-                        # Check model outputs status, then pass it to join with orginal data
-                        abd_path = self._get_abd_path(country, logtype, date, hour)
-                        abd_subparts = self.getSubHourPartitions(abd_path, '-', ABD_MAP)
-                        logging.info("abd_subparts = {}".format(abd_subparts))
-
-                        # Join the Spark Dataframe and save as orc file
-                        if len(abd_subparts) > 0:
-                            self.run_spark_join(country,logtype, date, hour, avro_subparts, abd_subparts)
-                        else:
-                            self.run_spark_orc(country, logtype, date, hour, avro_subparts)
-                    else:
-                        # No detection for other countries.  Just convert to ORC
-                        self.run_spark_orc(country, logtype, date, hour, avro_subparts)
-                                                
-                    # Fill empty partitions with empty ORC
-                    hasFill = False if (logtype == 'display_dr') else True
-                    self.addMissingHDFSPartitions(tmp_path, hasFill)
-
-                    # FIXME - Move into run_spark_orc() or run_spark_join.
-                    # Use a dedicated function generate tmp path.
-                    if (not self.NORUN): 
-                        self.mvHDFS(country, logtype, date, hour)   
-
-                    # Add Hive partitions
-                    orc_path = self._get_science_core_orc_path(country, logtype, date, hour)
-                    orc_subparts = self.getSubHourPartitions(orc_path)                    
-
-                    if (len(orc_subparts) == 0):
-                        logging.info("x SKIP: MISSING ORC FILE {}".format(orc_path))
-                        continue
-                    else:
-                        self.addHivePartitions(country, logtype, date, hour,
-                                               orc_subparts, orc_path)
+                    self._genHourlyHelper(country, logtype, date, hour, avro_subparts)
                                                                                               
-                    """Touch hourly status"""
-                    if (not self.NORUN):              
+                    # Touch hourly status
+                    if (not self.NORUN and not self.NOSTATUS):              
                         self.status_log.addStatus(hourly_key, date + "/" + hour)                        
                         hour_count += 1
 
-                """Touch daily status"""
-                if (hour_count == 24):
+                # Touch daily status
+                if (hour_count == 24 and not self.NOSTATUS):
                     self.status_log.addStatus(daily_key, date)
+
+
+    def _genHourlyHelper(self, country, logtype, date, hour, avro_subparts):
+        # Delete previous tmp dir              
+        model_countries = set(self.cfg.get_array('ard.model.countries'))          
+        tmp_path = self._get_tmp_path(country, logtype, date, hour)
+        logging.info("tmp_path = '{}'".format(tmp_path))
+        if hdfs.has(tmp_path):
+            hdfs.rmrs(tmp_path)
+
+        # Run the Spark command
+        if country in model_countries:
+            # Generate models
+            self.run_spark_model(country,logtype, date, hour)
+
+            # Check model outputs status, then pass it to join with orginal data
+            abd_path = self._get_abd_path(country, logtype, date, hour)
+            abd_subparts = self.getSubHourPartitions(abd_path, '-', ABD_MAP)
+            logging.info("abd_subparts = {}".format(abd_subparts))
+
+            # Join the Spark Dataframe and save as orc file
+            if len(abd_subparts) > 0:
+                self.run_spark_join(country,logtype, date, hour, avro_subparts, abd_subparts)
+            else:
+                self.run_spark_orc(country, logtype, date, hour, avro_subparts)
+        else:
+            # No detection for other countries.  Just convert to ORC
+            self.run_spark_orc(country, logtype, date, hour, avro_subparts)
+                                    
+        # Fill empty partitions with empty ORC
+        if (not self.NOFIX and not self.NORUN):
+            hasFillPartition = False if (logtype == 'display_dr') else True
+            self.addMissingHDFSPartitions(tmp_path, hasFillPartition)
+
+        # FIXME - Move into run_spark_orc() or run_spark_join.
+        # Use a dedicated function generate tmp path.
+        if (not self.NORUN): 
+            self.mvHDFS(country, logtype, date, hour, self.PARTIAL)   
+
+        # Add Hive partitions
+        if (not self.NOHIVE):
+            orc_path = self._get_science_core_orc_path(country, logtype, date, hour)
+            orc_subparts = self.getSubHourPartitions(orc_path)                    
+
+            if (len(orc_subparts) == 0):
+                logging.info("x SKIP: MISSING ORC {}".format(orc_path))
+            else:
+                self.addHivePartitions(country, logtype, date, hour,
+                                       orc_subparts, orc_path)
 
 
     def fixMissing(self):
@@ -195,7 +212,9 @@ class AbnormalRequest(BaseArd):
 
     def run_spark_orc(self,country,logtype,date,hour,avro_subparts):
         """Run Spark model to generate abnormal request_id"""
-        logging.info("# Running Spark AVRO TO ORC Command Line... ...")        
+        logging.info("# Running Spark AVRO TO ORC - {} {} {} {} ...".format(
+            country, logtype, date, hour))     
+        logging.info(" - avro partitions =", avro_subparts)
         
         """Configurations of the Spark job"""
         queue = self.cfg.get('ard.default.queue')
@@ -335,20 +354,40 @@ class AbnormalRequest(BaseArd):
         base_dir = self.cfg.get('hdfs.prod.abd')
         return os.path.join(base_dir, country, logtype, *entries)
         
-    def mvHDFS(self, country, logtype, date, hour):
-        """Move completed one-hour data from tmp file to data/science_core_ex"""
+    def mvHDFS(self, country, logtype, date, hour, partial=False):
+        """Move completed data from tmp folder to target location.
+        
+        If partial is True, this will be a partial replacement.
+        It will only update partitions in the tmp folders.
+        Other existing partitions will not be affected.
+        This feature is introduced to fix the "rest" folder only.
+        """
 
         tmp_path = self._get_tmp_path(country, logtype, date, hour)
         output_dir = self._get_science_core_orc_path(country, logtype, date)
         output_path = os.path.join(output_dir, hour)
 
-        # Remove old output
-        if (hdfs.has(output_path)):
-            hdfs.rmrs(output_path)
+        if partial:
+            subparts = self.getSubHourPartitions(tmp_path)
+            for p in subparts:
+                fill = p[0]
+                sl = p[1]
+                src = os.path.join(tmp_path, fill, sl)
+                dest = os.path.join(output_path, fill, sl)
+                dest_parent = os.path.join(output_path, fill)
+                if not hdfs.has(dest_parent):
+                    hdfs.mkdirp(dest_parent, self.NORUN)
+                hdfs.mv(src, dest, self.NORUN)
+            hdfs.rmrs(tmp_path)
 
-        # Move tmp folder to the destination directory
-        hdfs.mkdirp(output_dir, self.NORUN)
-        hdfs.mv(tmp_path, output_path, self.NORUN)
+        else:
+            # Remove old output
+            if (hdfs.has(output_path)):
+                hdfs.rmrs(output_path)
+    
+            # Move tmp folder to the destination directory
+            hdfs.mkdirp(output_dir, self.NORUN)
+            hdfs.mv(tmp_path, output_path, self.NORUN)
 
 
     def _get_cfg(self, baseKey, country):

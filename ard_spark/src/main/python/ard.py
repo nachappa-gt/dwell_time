@@ -71,25 +71,29 @@ def parse_arguments():
                         default=DEFAULT_CONFIG_FILE)
     parser.add_argument('--country', help="Countries")
     parser.add_argument('--date', help="Date(s)")
-    parser.add_argument('-d', '--debug', action='store_true',
-                        help="Turn on debugging")
-    parser.add_argument('-f', '--force', action='store_true',
-                        help="Force the execution")
     parser.add_argument('--hour', help="Hour(s)")
+    parser.add_argument('--fill', help="Fill folders")
+    parser.add_argument('--sl', help="SL (loc_score) folders")
     parser.add_argument('--keep', action='store_true',
                         help="Keep old output files")
     parser.add_argument('-l', '--lock', help="Define custom lock file",
                         default="lock")
     parser.add_argument('--logtype', 
-                        help="Log types (e.g. exchange, display, euwest1); aka product types")
-    parser.add_argument('-n', '--norun', action='store_true',
-                        help="No run.")
-    parser.add_argument('-ne', '--noemail', action='store_true',
-                        help="No email.")
-    parser.add_argument('-nl', '--nolock', action='store_true',
-                        help="No locking")
+                        help="Log types (e.g. exchange, display, euwest1); aka product types")                        
     parser.add_argument('--output', help="Temporary HDFS output folders")
     parser.add_argument('-q', '--queue', help="YARN queue name")
+
+    # Flags
+    parser.add_argument('-d', '--debug', action='store_true', help="Turn on debugging")
+    parser.add_argument('-f', '--force', action='store_true', help="Force run")
+    parser.add_argument('-ne', '--noemail', action='store_true', help="No email.")
+    parser.add_argument('-nf', '--nofix', action='store_true', help="No missing folder fix.")
+    parser.add_argument('-nh', '--nohive', action='store_true', help="No Hive update.")
+    parser.add_argument('-nl', '--nolock', action='store_true', help="No locking")
+    parser.add_argument('-n',  '--norun', action='store_true', help="No run.")
+    parser.add_argument('-ns', '--nostatus', action='store_true', help="No status update.")
+    parser.add_argument('--partial', action='store_true', help="Partial replacement.")
+    
 
     opt = parser.parse_args()
     return(opt)

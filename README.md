@@ -8,9 +8,7 @@ Detect abnormal user location.
 
 Folders:
 
-* ard_spark - spark, production version.
+* ard_spark - Current version based on Spark.
 
-* ard_hive - Old, Hive impementation.
-
-* ard_dev - latest dev version.
+* ard_hive - Old impementation using Hive for joining.
 
