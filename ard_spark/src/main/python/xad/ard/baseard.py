@@ -28,11 +28,6 @@ from xad.common.optioncontainer import OptionContainer
 from xad.common import system
 
 
-FILL_FOLDERS = set(['fill', 'nf'])
-FILL_FOLDERS_DR = set(['nf'])
-LOC_SCORE_FOLDERS = set(['tll', 'pos', 'rest'])
-
-
 class BaseArd(OptionContainer):
     """Base ard class.
     
@@ -180,16 +175,20 @@ class BaseArd(OptionContainer):
         return hourutil.expand(hourStr)
 
 
-    def getFills(self):
-        """Get the fill/nf folders"""
+    def getFillFolders(self):
+        """Get the fill/nf folders.  Exclude fill if hasFill is false"""
         if (self.FILL):
             str = self.FILL
         else:
             str = self.cfg.get('science_core.fill.folders')
         return re.split('[,\s]+', str)
 
+    def getNoFillFolders(self):
+        """Get the fill/nf folders.  Exclude fill if hasFill is false"""
+        str = self.cfg.get('science_core.nf.folders')
+        return re.split('[,\s]+', str)
 
-    def getSLLevels(self):
+    def getSLFolders(self):
         """Get the SL tll/pos/rest folders"""
         if (self.SL):
             str = self.SL
@@ -226,6 +225,8 @@ class BaseArd(OptionContainer):
         subparts = []
 
         outputs = hdfs.du(hour_path + "/*")
+        fill_folders = set(self.getFillFolders())
+        sl_folders = set(self.getSLFolders())
 
         # Now collect fill and loc_score entries
         for p in outputs:
@@ -245,7 +246,7 @@ class BaseArd(OptionContainer):
                    if loc_score in mapper:
                        loc_score = mapper[loc_score]
                    
-               if (fill in FILL_FOLDERS and loc_score in LOC_SCORE_FOLDERS):
+               if (fill in fill_folders and loc_score in sl_folders):
                    pair = [fill,loc_score]
                    subparts.append( delim.join(pair) if delim else pair)
 
@@ -255,10 +256,11 @@ class BaseArd(OptionContainer):
     def makeFullSubHourPartitions(self, hasFill=True, delim=None):
         """Create a complet sub partition list"""
         
-        fill_folders = FILL_FOLDERS if hasFill else FILL_FOLDERS_DR
+        fill_folders = self.getFillFolders() if hasFill else self.getNoFillFolders()
+        sl_folders = self.getSLFolders()
         return [ delim.join([x,y]) if delim else [x,y]
             for x in sorted(fill_folders)
-            for y in sorted(LOC_SCORE_FOLDERS)]
+            for y in sorted(sl_folders)]
 
         
     def makeAddPartitionQuery(self, table_name, cntry, prod_type, dt, hour,
@@ -435,6 +437,8 @@ class BaseArd(OptionContainer):
 
         # Use du to find out the folders and sizes
         du_outputs = hdfs.du(day_path + "/*/*")
+        fill_folders = set(self.getFillFolders())
+        sl_folders = set(self.getSLFolders())
         
         # Re-organize the data into t dictionary
         valid_dict = dict();
@@ -453,7 +457,7 @@ class BaseArd(OptionContainer):
             fill = entries[-2]
             loc_score = entries[-1]
                
-            if (fill in FILL_FOLDERS and loc_score in LOC_SCORE_FOLDERS):
+            if (fill in fill_folders and loc_score in sl_folders):
                 pair = delim.join([fill,loc_score])
                 if (hour in valid_dict):
                     valid_set = valid_dict[hour]
@@ -467,7 +471,7 @@ class BaseArd(OptionContainer):
             
         full_set = set(self.makeFullSubHourPartitions(hasFill, delim=delim))
         full_size = len(full_set)
-        
+
         missing_parts = []
         for hour in sorted(valid_dict.keys()):
             avail_set = valid_dict[hour]
@@ -478,7 +482,7 @@ class BaseArd(OptionContainer):
             missing_parts.append( [hour, missing_list] )
 
         return missing_parts
-            
+
         
         
 #-----------

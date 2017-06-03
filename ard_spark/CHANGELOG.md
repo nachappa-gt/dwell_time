@@ -1,3 +1,9 @@
+Release 1.0.3
+--------------
+- Fix empty orc for all non-us and non-gb countries.
+- Fix empty orc for us gb rest partition
+- Date: 2017-06-02
+
 Release 1.0.2
 --------------
 - Fixed "fixpar" on dealing with empty folders.

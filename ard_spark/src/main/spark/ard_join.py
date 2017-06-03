@@ -111,7 +111,7 @@ def save_orc(hiveContext, country, logtype, date, hour, fill, loc_score,
     df = hiveContext.read.format("com.databricks.spark.avro").\
         load(avro_path,schema = schema)
    
-    if not df.rdd.isEmpty:
+    if not df.rdd.isEmpty():
         df.write.mode("overwrite").format("orc").\
             option("compression","zlib").\
             mode("overwrite").save(output_path)

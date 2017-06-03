@@ -31,6 +31,7 @@ rp-build: build
 	$(XPKG) $(PKG_CONF)
 
 rpc rp-cron:
+	rm -f $(PKG_CRON_NAME)*.rpm
 	$(XPKG) $(PKG_CRON_NAME).conf
 
 # Link package
