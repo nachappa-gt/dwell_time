@@ -73,14 +73,16 @@ class Dispatcher(BaseArd):
         for cmdKey in activeKeys:
             beginTime = self._beginSession(cmdKey)
             # ARD
-            if (cmdKey == ck.get('gen')):
+            if (cmdKey == ck.get('addpar')):
+                self.ADD_PAR.genHourly()
+            elif (cmdKey == ck.get('gen')):
                 self.AR.genHourly()
-            elif (cmdKey == ck.get('fixpar')):
-                self.AR.fixMissing()
             elif (cmdKey == ck.get('regen')):
                 self.REGEN.genHourly()
-            elif (cmdKey == ck.get('addpar')):
-                self.ADD_PAR.genHourly()
+            elif (cmdKey == ck.get('fixpar')):
+                self.AR.fixMissing()
+            elif (cmdKey == ck.get('fixstatus')):
+                self.AR.fixStatusLog()
 
             # TBD
             elif (cmdKey == ck.get('clean')):

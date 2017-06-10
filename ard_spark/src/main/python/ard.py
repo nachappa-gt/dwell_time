@@ -29,7 +29,7 @@ from xad.ard.dispatcher import Dispatcher
 # Constants
 DEFAULT_CONFIG_DIRS = "/home/xad/ard/config:/home/xad/share/config"
 DEFAULT_CONFIG_FILE = "ard.properties"
-DEFAULT_ALERT_EMAIL = 'xiangling.meng@xad.com'
+DEFAULT_ALERT_EMAIL = 'science-ops@xad.com'
 DEFAULT_EMAIL_PRIORITY = '0'
 DEBUG = False
 
@@ -89,7 +89,9 @@ def parse_arguments():
     parser.add_argument('-ne', '--noemail', action='store_true', help="No email.")
     parser.add_argument('-nf', '--nofix', action='store_true', help="No missing folder fix.")
     parser.add_argument('-nh', '--nohive', action='store_true', help="No Hive update.")
+    parser.add_argument('-nj', '--nojoin', action='store_true', help="No Join.")
     parser.add_argument('-nl', '--nolock', action='store_true', help="No locking")
+    parser.add_argument('-nm', '--nomodel', action='store_true', help="No modeling")
     parser.add_argument('-n',  '--norun', action='store_true', help="No run.")
     parser.add_argument('-ns', '--nostatus', action='store_true', help="No status update.")
     parser.add_argument('--partial', action='store_true', help="Partial replacement.")
