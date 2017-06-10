@@ -8,10 +8,16 @@ Copyright (C) 2017.  xAd, Inc.  All Rights Reserved.
 
 """
 
+import sys
+sys.path.append('/home/xad/ard/python')
+sys.path.append('/home/xad/share/python')
 import os
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import HiveContext
 import argparse
+
+DEFAULT_CONFIG_DIRS = "/home/xad/ard/config:/home/xad/share/config"
+DEFAULT_CONFIG_FILE = "ard.properties"
 
 
 def save_as_orc(hiveContext,country, logtype, date, hour, fill, loc_score,
@@ -23,7 +29,6 @@ def save_as_orc(hiveContext,country, logtype, date, hour, fill, loc_score,
     FIXME: this is a duplicated function (another one in ard_join).
     Remove duplication.
     """
-
     avro_path = os.path.join(input_dir, fill, loc_score)                            
     output_path = os.path.join(output_dir, fill, loc_score)
 
@@ -37,12 +42,17 @@ def save_as_orc(hiveContext,country, logtype, date, hour, fill, loc_score,
             option("compression","zlib").\
             mode("overwrite").save(output_path)
 
-
-def main():     
-
-    #Add arguments in the command to specify the information of the data to process
-    #such as country, prod_type, dt, fill and loc_score
+def parse_arguments():
+    """Parse command line arguments
+    
+    Add arguments in the command to specify the information of the data
+    to process such as country, prod_type, dt, fill and loc_score"
+    """
     parser = argparse.ArgumentParser()
+    parser.add_argument('--config_dirs', help="Configuration search dirs",
+                        default=DEFAULT_CONFIG_DIRS)
+    parser.add_argument('--config', help="Configuration file",
+                        default=DEFAULT_CONFIG_FILE)    
     parser.add_argument("--country", help="country")
     parser.add_argument("--logtype", help="logtype")
     parser.add_argument("--date", help="date")
@@ -50,36 +60,33 @@ def main():
     parser.add_argument("--avro_partitions",help="avro_partitions")
     parser.add_argument("--input_dir", help="input dir")
     parser.add_argument("--output_dir", help="output dir")
-   
-    #Parse the arguments 
-    args = parser.parse_args()
-    if args.country:
-        country = args.country
-    if args.logtype:
-        logtype = args.logtype
-    if args.date:
-        date = args.date
-    if args.hour:
-        hour = args.hour
-    if args.avro_partitions:
-        partitions_str = args.avro_partitions
-        sub_parts = [ x.split('-') for x in partitions_str.split(',') ]    
-    if args.input_dir:
-        input_dir = args.input_dir
-    if args.output_dir:
-        output_dir = args.output_dir
+
+    # Parse the arguments
+    opt = parser.parse_args()
+    return(opt)
     
-    app_name = "ard_orc {}/{}/{}/{}".format(country, logtype, date, hour)
+
+def get_app_name(opt):
+    """Get the application name"""
+    return os.path.join('ard_orc', opt.country,
+                        opt.logtype, opt.date, opt.hour)
+
+def main():        
+    #Parse the arguments 
+    opt = parse_arguments()
+    sub_parts = [ x.split('-') for x in opt.avro_partitions.split(',') ]    
+
+    # Context
+    app_name = get_app_name(opt)
     conf = SparkConf().setAppName(app_name)
     sc = SparkContext(conf = conf)
-
-#    sqlContext = SQLContext(sc)
     hiveContext = HiveContext(sc)
 
     for p in sub_parts:
         fill, loc_score = p
-        save_as_orc(hiveContext, country, logtype, date, hour, fill, loc_score,
-                    input_dir, output_dir)                
+        save_as_orc(hiveContext, opt.country, opt.logtype, opt.date, opt.hour, 
+                    fill, loc_score,
+                    opt.input_dir, opt.output_dir)                
 
     sc.stop()
 

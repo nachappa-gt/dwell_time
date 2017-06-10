@@ -1,3 +1,8 @@
+Release 1.0.4
+--------------
+- Use explicit schema for fill to address schema changes for fp_matches.
+- Date: 2017-06-09
+
 Release 1.0.3
 --------------
 - Fix empty orc for all non-us and non-gb countries.

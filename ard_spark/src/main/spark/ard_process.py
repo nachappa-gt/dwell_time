@@ -10,22 +10,27 @@ with the science core data.
 
 Copyright (C) 2017.  xAd, Inc.  All Rights Reserved.
 
-@author: xiangling
+@author: xiangling, victor
 
 """
 
+import sys
+sys.path.append('/home/xad/ard/python')
+sys.path.append('/home/xad/share/python')
 import argparse
 import json
 import os
 from math import sin, cos, sqrt, atan2, radians
 
 from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext 
 from pyspark.sql import HiveContext
 import pyspark.sql.types as pst
 
-#from pyspark.sql import Row
-#from operator import itemgetter
+from xad.common.conf import Conf
+
+DEFAULT_CONFIG_DIRS = "/home/xad/ard/config:/home/xad/share/config"
+DEFAULT_CONFIG_FILE = "ard.properties"
+
 
 
 def miles (pre, cur):
@@ -229,42 +234,52 @@ def process(iterator):
         return 'error'
 
 
-def main():
- 
-    # Add arguments in the command to specify the information of the data to process
-    # such as country, prod_type, dt, fill and loc_score"""
+def parse_arguments():
+    """Parse command line arguments"""
     parser = argparse.ArgumentParser()
+    parser.add_argument('--config_dirs', help="Configuration search dirs",
+                        default=DEFAULT_CONFIG_DIRS)
+    parser.add_argument('--config', help="Configuration file",
+                        default=DEFAULT_CONFIG_FILE)    
     parser.add_argument("--country", help="country")
     parser.add_argument("--logtype", help="logtype")
     parser.add_argument("--date", help="date")
     parser.add_argument("--hour", help="hour")    
     parser.add_argument("--input_dir", help="input dir")    
-    parser.add_argument("--output_dir", help="outputdir")    
+    parser.add_argument("--output_dir", help="outputdir")  
     
     # Parse the arguments
-    args = parser.parse_args()
-    if args.country:
-        country = args.country
-    if args.logtype:
-        logtype = args.logtype
-    if args.date:
-        date = args.date
-    if args.hour:
-        hour = args.hour
-    if args.input_dir:
-        input_dir = args.input_dir
-    if args.output_dir:
-        output_dir = args.output_dir
+    opt = parser.parse_args()
+    return(opt)
+
+
+def load_configuration(opt):
+    """Load configuration files"""
+    conf = Conf()
+    conf.load(opt.config, opt.config_dirs)
+    return(conf)
+
+def get_app_name(opt):
+    """Get the application name"""
+    return os.path.join('ard_process', opt.country,
+                        opt.logtype, opt.date, opt.hour)
+
+def main():
+ 
+    # Parse command line argumen
+    global opt
+    opt = parse_arguments()
+#    cfg = load_configuration(opt)
     
     # Create the contexts
-    appName = os.path.join('ard_process', country, logtype, date, hour)
-    conf = SparkConf().setAppName(appName)
-    sc = SparkContext(conf = conf)    
-    sqlContext = SQLContext(sc)
+    appName = get_app_name(opt)
+    sparkconf = SparkConf().setAppName(appName)
+    sc = SparkContext(conf = sparkconf)    
+#    sqlContext = SQLContext(sc)
     hiveContext = HiveContext(sc)
     
     # Using databricks to load avro data
-    avro_path_tp = os.path.join(input_dir, '{fill,nf}/{tll,pos}')  
+    avro_path_tp = os.path.join(opt.input_dir, '{fill,nf}/{tll,pos}')  
     df_tp = hiveContext.read.format("com.databricks.spark.avro").load(avro_path_tp)
     df = df_tp.where((df_tp.uid !='') & (df_tp.sl_adjusted_confidence >=94))
 
@@ -288,12 +303,14 @@ def main():
     schema = pst.StructType(field)
 
     # Output from model is a list of tuples, covnert tuples back to dataframe"""
-    df_ab = sqlContext.createDataFrame(list_of_requests, schema = schema)
+    df_ab = hiveContext.createDataFrame(list_of_requests, schema = schema)
 
     # Save dataframe with partitions
     df_ab.write.mode("overwrite").format("orc") \
-        .option("compression","zlib").mode("overwrite") \
-        .partitionBy('fill','loc_score').save(output_dir)
+        .option("compression","zlib") \
+        .mode("overwrite") \
+        .partitionBy('fill','loc_score') \
+        .save(opt.output_dir)
 
     # Force the spark process to stop.
     sc.stop()
