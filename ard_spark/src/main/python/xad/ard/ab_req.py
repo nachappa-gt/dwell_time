@@ -19,17 +19,21 @@ ABD_MAP = {'fill=FILLED':'fill', 'fill=NOT_FILLED':'nf',
 class AbnormalRequest(BaseArd):
     """A class for downloading tables from the POI database."""
 
-    def __init__(self, cfg, opt, status_log):
+    def __init__(self, cfg, opt):
         """Constructor"""
         BaseArd.__init__(self, cfg, opt)
-        self.status_log = status_log
- 
+        self.status_log = self.STATUS_L
     #------------------------
     # Processing Hourly Data
     #------------------------
 
     def genHourly(self):
-        """Generate updated Science Core orc table with new features in it. """
+        """Generate updated Science Core orc table with new features in it. 
+        
+        For us and gb, it will detect abnormal requests and join them
+        with the original AVRO and modify r_s_info.
+        For other countries, it will only conver AVRO to ORC.
+        """
         logging.info('Generating Science Core orc files with Abnormal Request...')
 
         # Get parameters
@@ -44,19 +48,21 @@ class AbnormalRequest(BaseArd):
         logging.info("- regions = {}".format(regions))
         logging.info("- fill folders = {}".format(fill_folders))      
         logging.info("- sl folders = {}".format(sl_folders))   
-        if (self.NOHIVE):
-            logging.info("- No Run")   
+        if (self.NOMODEL):
+            logging.info("- NOMODEL")   
         if (self.NOJOIN):
             logging.info("- No JOIN (anomily detection only)")   
             self.NOHIVE = True
             self.NOSTATUS = True
             self.NOFIX = True
         if (self.NORUN):
-            logging.info("- No Hive")   
+            logging.info("- NORUN")   
+        if (self.NOHIVE):
+            logging.info("- NOHIVE")   
         if (self.NOSTATUS):
-            logging.info("- No Status Log Update")   
+            logging.info("- NOSTATUS")   
         if (self.PARTIAL):
-            logging.info("- Partial")   
+            logging.info("- PARTIAL")   
 
         keyPrefix = self.cfg.get('status_log_local.key.science_core_x')
         daily_tag = self.cfg.get('status_log_local.tag.daily')
@@ -73,7 +79,7 @@ class AbnormalRequest(BaseArd):
                 daily_status = self.status_log.getStatus(daily_key, date)
                 if (daily_status is not None and daily_status == 1
                         and not self.FORCE and not self.NOSTATUS):
-                    logging.debug("x SKIP: found daily status {} {}".format(daily_key, date))
+                    logging.info("x SKIP: found daily status {} {}".format(daily_key, date))
                     continue
 
                 hour_count = 0
@@ -84,10 +90,17 @@ class AbnormalRequest(BaseArd):
                     hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
                     if (hourly_status is not None and
                             hourly_status == 1 and not self.FORCE):
-                        logging.debug("x SKIP: found hourly status {} {}:{}".format(hourly_key, date, hour))
+                        logging.info("x SKIP: found hourly status {} {}:{}".format(hourly_key, date, hour))
                         hour_count += 1
                         continue
-                     
+
+                    # Check for SL hourly update (dependency)
+                    sl_hourly_key = self.getSLHourlyStatusLogKey(country)
+                    sl_status = self.status_log.getStatus(sl_hourly_key, date + "/" + hour)
+                    if (not sl_status and not self.FORCE):
+                        logging.info("x SKIP: missing status: {} {}/{}".format(sl_hourly_key, date, hour))
+                        break               
+                    
                     # Get source sub-hour partitions
                     avro_path = self._get_science_core_avro_path(country, logtype, date, hour)
                     avro_subparts = self.getSubHourPartitions(avro_path, '-')
@@ -95,6 +108,7 @@ class AbnormalRequest(BaseArd):
                         logging.debug("x SKIP: missing source {}".format(avro_path))
                         break                        
 
+                    # Helper function
                     self._genHourlyHelper(country, logtype, date, hour, avro_subparts)
                                                                                               
                     # Touch hourly status
@@ -273,49 +287,6 @@ class AbnormalRequest(BaseArd):
                             self.status_log.addStatus(daily_key, date)
 
 
-    def run_spark_orc(self,country,logtype,date,hour,avro_subparts):
-        """Run Spark model to generate abnormal request_id"""
-        logging.info("# Running Spark AVRO TO ORC - {} {} {} {} ...".format(
-            country, logtype, date, hour))     
-        logging.info(" - avro partitions =", avro_subparts)
-        
-        """Configurations of the Spark job"""
-        queue = self.cfg.get('ard.default.queue')
-        spark_path = self.cfg.get('spark.script.orc')
-        driver_memory = self.cfg.get('spark.default.driver_memory')
-        packages = self.cfg.get('spark.default.databricks')
-        
-        executor_cores = self._get_cfg('spark.orc.executor_cores', country)
-        executor_memory = self._get_cfg('spark.orc.executor_memory', country)
-        num_executors = self._get_cfg('spark.orc.num_executors', country)
-
-        input_dir = self._get_science_core_avro_path(country, logtype, date, hour)
-        tmp_dir = self._get_tmp_path(country, logtype, date, hour)
-
-        """Command to run Spark, abnormal request detection model is built in Spark"""
-        cmd = ["SPARK_MAJOR_VERSION=2"]
-        cmd += ["spark-submit"]
-        cmd += ["--master", "yarn"]
-        cmd += ["--queue", queue ]
-        cmd += ["--conf", "spark.yarn.executor.memoryOverhead=3000"]
-        cmd += ["--driver-memory", driver_memory]
-        cmd += ["--executor-memory", executor_memory]
-        cmd += ["--num-executors", num_executors]
-        cmd += ["--executor-cores", executor_cores]
-        cmd += ["--packages", packages]
-        cmd += [spark_path]
-        cmd += ["--country", country]
-        cmd += ["--logtype", logtype]
-        cmd += ["--date", date]
-        cmd += ["--hour", hour]    
-        cmd += ["--avro_partitions", ','.join(avro_subparts)]
-        cmd += ["--input_dir", input_dir]
-        cmd += ["--output_dir", tmp_dir]
-
-        cmdStr = " ".join(cmd)
-        system.execute(cmdStr, self.NORUN)
-
-
     def run_spark_model(self, country, logtype, date, hour):
         """Run Spark model to generate abnormal request_id"""
                 
@@ -323,7 +294,7 @@ class AbnormalRequest(BaseArd):
         
         """Configurations of the Spark job"""
         queue = self.cfg.get('ard.default.queue')
-        spark_path = self.cfg.get('spark.script.process')
+        spark_path = self.cfg.get('spark.script.model')
         driver_memory = self.cfg.get('spark.default.driver_memory')
         packages = self.cfg.get('spark.default.databricks')
         
@@ -333,6 +304,11 @@ class AbnormalRequest(BaseArd):
 
         avro_path = self._get_science_core_avro_path(country, logtype, date, hour)
         abd_path = self._get_abd_path(country, logtype, date, hour)
+        
+        # SL
+        sl_entries = self.findSLEntries(country, date, hour)
+        sl_centroid_path = self.getSLCombinedHourlyLLPaths(country, sl_entries)
+        sl_ip_path = self.getSLCombinedHourlyIPPaths(country, sl_entries)
 
 
         """Command to run Spark, abnormal request detection model is built in Spark"""
@@ -347,12 +323,25 @@ class AbnormalRequest(BaseArd):
         cmd += ["--executor-cores", executor_cores]
         cmd += ["--packages", packages]
         cmd += [spark_path]
+        if self.CONFIG:
+            cmd += ["--config", self.CONFIG]
+        if self.CONFIG_DIRS:
+            cmd += ["--config_dirs \"{}\"".format(self.CONFIG_DIRS)]
         cmd += ["--country", country]
         cmd += ["--logtype", logtype]
         cmd += ["--date", date]
         cmd += ["--hour", hour]
         cmd += ["--input_dir", avro_path]
         cmd += ["--output_dir", abd_path]
+        if sl_centroid_path:
+            cmd += ["--sl_centroid_path \"{}\"".format(sl_centroid_path)]
+        if sl_ip_path:
+            cmd += ["--sl_ip_path \"{}\"".format(sl_ip_path)]
+        
+        if (self.DEBUG):
+            cmd += ["--debug"]
+        if (self.NORUN or self.NOMODEL):
+            cmd += ["--norun"]
         
         cmdStr = " ".join(cmd)
         system.execute(cmdStr, self.NORUN)
@@ -393,6 +382,8 @@ class AbnormalRequest(BaseArd):
         cmd += ["--executor-cores", executor_cores]
         cmd += ["--packages", packages]
         cmd += [spark_path]
+        cmd += ["--config", self.CONFIG]
+        cmd += ["--config_dirs", self.CONFIG_DIRS]
         cmd += ["--country", country]
         cmd += ["--logtype", logtype]
         cmd += ["--date", date]
@@ -402,20 +393,69 @@ class AbnormalRequest(BaseArd):
         cmd += ["--input_dir", input_dir]
         cmd += ["--abd_dir", abd_dir]
         cmd += ["--output_dir", tmp_dir]
+        if (self.DEBUG):
+            cmd += ["--debug"]
+        if (self.NORUN or self.NOJOIN):
+            cmd += ["--norun"]
 
         cmdStr = " ".join(cmd)
         system.execute(cmdStr, self.NORUN)
 
  
+    def run_spark_orc(self,country,logtype,date,hour,avro_subparts):
+        """Run Spark model to generate abnormal request_id"""
+        logging.info("# Running Spark AVRO TO ORC - {} {} {} {} ...".format(
+            country, logtype, date, hour))     
+        logging.info(" - avro partitions =", avro_subparts)
+        
+        """Configurations of the Spark job"""
+        queue = self.cfg.get('ard.default.queue')
+        spark_path = self.cfg.get('spark.script.orc')
+        driver_memory = self.cfg.get('spark.default.driver_memory')
+        packages = self.cfg.get('spark.default.databricks')
+        
+        executor_cores = self._get_cfg('spark.orc.executor_cores', country)
+        executor_memory = self._get_cfg('spark.orc.executor_memory', country)
+        num_executors = self._get_cfg('spark.orc.num_executors', country)
+
+        input_dir = self._get_science_core_avro_path(country, logtype, date, hour)
+        tmp_dir = self._get_tmp_path(country, logtype, date, hour)
+
+        """Command to run Spark, abnormal request detection model is built in Spark"""
+        cmd = ["SPARK_MAJOR_VERSION=2"]
+        cmd += ["spark-submit"]
+        cmd += ["--master", "yarn"]
+        cmd += ["--queue", queue ]
+        cmd += ["--conf", "spark.yarn.executor.memoryOverhead=3000"]
+        cmd += ["--driver-memory", driver_memory]
+        cmd += ["--executor-memory", executor_memory]
+        cmd += ["--num-executors", num_executors]
+        cmd += ["--executor-cores", executor_cores]
+        cmd += ["--packages", packages]
+        cmd += [spark_path]
+        cmd += ["--config", self.CONFIG]
+        cmd += ["--config_dirs", self.CONFIG_DIRS]
+        cmd += ["--country", country]
+        cmd += ["--logtype", logtype]
+        cmd += ["--date", date]
+        cmd += ["--hour", hour]    
+        cmd += ["--avro_partitions", ','.join(avro_subparts)]
+        cmd += ["--input_dir", input_dir]
+        cmd += ["--output_dir", tmp_dir]
+        if (self.DEBUG):
+            cmd += ["--debug"]
+        if (self.NORUN):
+            cmd += ["--norun"]
+
+        cmdStr = " ".join(cmd)
+        system.execute(cmdStr, self.NORUN)
+
+
 
     #-------------------
     # Helper Functions
     #-------------------
 
-    def _get_abd_path(self, country, logtype, *entries):
-        """Get path to the ORC-based science foundation files"""
-        base_dir = self.cfg.get('hdfs.prod.abd')
-        return os.path.join(base_dir, country, logtype, *entries)
         
     def mvHDFS(self, country, logtype, date, hour, partial=False):
         """Move completed data from tmp folder to target location.

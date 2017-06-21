@@ -14,7 +14,6 @@ import logging
 import os
 
 from xad.common.commandkey import CommandKey
-from xad.common.statuslog import StatusLog
 from xad.ard.ab_req import AbnormalRequest
 from xad.ard.ab_regen import ArdRegen
 from xad.ard.ab_addpar import AddPartition
@@ -30,10 +29,9 @@ class Dispatcher(BaseArd):
         """Constructor"""
         BaseArd.__init__(self, cfg, opt.__dict__)
         # Create components
-        self.STATUS = StatusLog(cfg, prefix='status_log_local')
-        self.AR = AbnormalRequest(cfg, opt.__dict__, self.STATUS)
-        self.REGEN = ArdRegen(cfg, opt.__dict__, self.STATUS)
-        self.ADD_PAR = AddPartition(cfg, opt.__dict__, self.STATUS)
+        self.AR = AbnormalRequest(cfg, opt.__dict__)
+        self.REGEN = ArdRegen(cfg, opt.__dict__)
+        self.ADD_PAR = AddPartition(cfg, opt.__dict__)
 
     def run(self):
         """Acquire lock and dispatch commands.

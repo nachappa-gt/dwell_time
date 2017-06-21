@@ -19,12 +19,15 @@ import re
 import subprocess
 import sys
 import os
+from datetime import datetime
+from datetime import timedelta
 
 from xad.common import dateutil
 from xad.common import hourutil
 from xad.common import hdfs
 from xad.common.conf import Conf
 from xad.common.optioncontainer import OptionContainer
+from xad.common.statuslog import StatusLog
 from xad.common import system
 
 
@@ -42,7 +45,7 @@ class BaseArd(OptionContainer):
         # Keep a reference to options and the configuration object
         self.opt = opt
         self.cfg = cfg
-
+        self.STATUS_L = StatusLog(cfg, prefix='status_log_local')
 
     def execute(self, cmd):
         """Execute a shell command and print output to STDOUT.
@@ -89,13 +92,19 @@ class BaseArd(OptionContainer):
 
 
     def _get_abd_path(self, country, logtype, *entries):
+        """Get path to the ORC-based science foundation files"""
         base_dir = self.cfg.get('hdfs.prod.abd')
         return os.path.join(base_dir, country, logtype, *entries)
+
 
     def _get_tmp_path(self, country, logtype, *entries):
         base_dir = '/tmp/ard'        
         folder = os.path.join(country, logtype, *entries).replace("/", "_")
         return os.path.join(base_dir, "WIP_" + folder)        
+
+
+
+
 
 
     def getCountries(self, key='default.countries'):
@@ -106,7 +115,6 @@ class BaseArd(OptionContainer):
             retval = self.cfg.get_array(key)
         #logging.debug("Countries = {}".format(retval))
         return retval
-    
 
     def _get_country_logtypes(self, country, defaultKey='default.logtypes'):
         """Get logtypes associated with a country.  The user may override
@@ -483,6 +491,94 @@ class BaseArd(OptionContainer):
 
         return missing_parts
 
+
+    #-----------
+    # SL Related
+    #-----------
+    def getSLHourlyLLPath(self, country, *entries):
+        base_dir = self.cfg.get('sl.output.dir')
+        folder = self.cfg.get('sl.hourly.ll.folder')
+        return os.path.join(base_dir, country, folder, *entries)        
+
+
+    def getSLHourlyIPPath(self, country, *entries):
+        base_dir = self.cfg.get('sl.output.dir')
+        folder = self.cfg.get('sl.hourly.ip.folder')
+        return os.path.join(base_dir, country, folder, *entries)
+
+    def getSLCombinedHourlyLLPaths(self, country, entryList):
+        path = ""
+        if (len(entryList) > 0):
+            entryStr = "{{{}}}".format(",".join(entryList))
+            base = self.getSLHourlyLLPath(country)
+            path = os.path.join(base, entryStr)
+        return path
+
+    def getSLCombinedHourlyIPPaths(self, country, entryList):
+        path = ""
+        if (len(entryList) > 0):
+            entryStr = "{{{}}}".format(",".join(entryList))
+            base = self.getSLHourlyIPPath(country)
+            path = os.path.join(base, entryStr)
+        return path
+        
+    def getSLHourlyStatusLogKey(self, country):
+        slKeyPrefix = self.cfg.get('status_log_local.key.sl.centroid')
+        slHourlyTag = self.cfg.get('status_log_local.tag.sl.hourly')
+        return os.path.join(slKeyPrefix, country, slHourlyTag)
+
+
+    def getSLDelayHours(self, country, date, hour):
+        """Get the delay in hours"""
+        retval = None        
+        status_key = self.getSLHourlyStatusLogKey(country)
+        statusTime = self.STATUS_L.getTimestamp(status_key, date+"/"+hour)
+        
+        if (statusTime):    
+            dataTime = datetime.strptime(date + " " + hour, "%Y/%m/%d %H")
+            delta = statusTime - dataTime            
+            retval = delta.days * 24 + int(delta.seconds/3600.0)
+            if (retval < 0):
+                retval = 0
+
+        return retval
+    
+    
+    def findSLEntries(self, country, date, hour):
+        """Find available SL entries (date/hour)
+        
+        This method will search available SL entries starting from
+        the specified date/hour.   It will calculate the delay in hours
+        and try to get that many entries, subjected to limitation. 
+        Return a list of date time in "yyyy/MM/dd/hh".
+        """
+        minDelay = int(self.cfg.get("sl.hourly.delay.min"))
+        maxDelay = int(self.cfg.get("sl.hourly.delay.max"))
+        delay = self.getSLDelayHours(country, date, hour)
+        if (delay < minDelay):
+            delay = minDelay
+        if (delay > maxDelay):
+            delay = maxDelay
+        status_key = self.getSLHourlyStatusLogKey(country)
+        
+        dateTime = datetime.strptime(date + " " + hour, "%Y/%m/%d %H")
+        folderList = []
+        missing = 0
+        maxGap = minDelay
+        for delay in range(delay):
+            timeStr = dateTime.strftime("%Y/%m/%d/%H")
+            status = self.STATUS_L.getStatus(status_key, timeStr)
+            if (status):
+                logging.info(" + {}".format(timeStr))
+                folderList.append(timeStr)
+            else:
+                missing += 1
+                if (missing >= maxGap):
+                    logging.warn("Reached max gap {} on delay {}".format(maxGap, delay))
+                    break
+            dateTime = dateTime + timedelta(hours = -1)
+                                
+        return folderList
         
         
 #-----------
@@ -556,6 +652,23 @@ def _test_queries(base):
                                           hour, subparts, locations)
     logging.info("QUERY = {}".format(addQuery))
 
+def _test_sl(base):
+    """Test smartlocation centroids"""
+    country = 'us'
+    date = '2017/06/01'
+    hour = '07'
+
+    deltaHours = base.getSLDelayHours(country, date, hour)
+    logging.info("delta hors = {}".format(deltaHours))
+    entries = base.findSLEntries(country, date, hour)
+    logging.info("folders = {}".format(entries))
+    
+    llPath = base.getSLCombinedHourlyLLPaths(country, entries)
+    ipPath = base.getSLCombinedHourlyIPPaths(country, entries)
+    logging.info("LL Path = {}".format(llPath))
+    logging.info("IP Path = {}".format(ipPath))
+
+
 
 def main():
     '''Unit test driver'''    
@@ -565,8 +678,9 @@ def main():
     
     # Tests
 #    _test_sub_hour_partitions(base)
-    _test_findMissingPartitions(base)
+#    _test_findMissingPartitions(base)
 #    _test_queries(base)
+    _test_sl(base)
 
     print ("Done!")
 

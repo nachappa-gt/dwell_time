@@ -15,7 +15,6 @@ sys.path.append('/home/xad/share/python')
 import argparse
 import logging
 import os
-import re
 
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import HiveContext

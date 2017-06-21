@@ -1,3 +1,9 @@
+Release 1.0.5
+--------------
+- Re-factoring with classes.
+- Centroid filtering.
+- Date: 2017-06-21
+
 Release 1.0.4
 --------------
 - Use explicit schema for fill to address schema changes for fp_matches.

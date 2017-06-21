@@ -21,10 +21,10 @@ class AddPartition(BaseArd):
     It also support status_log, with "add_partition" be the key prefix.    
     """
 
-    def __init__(self, cfg, opt, status_log):
+    def __init__(self, cfg, opt):
         """Constructor"""
         BaseArd.__init__(self, cfg, opt)
-        self.status_log = status_log
+        self.status_log = self.STATUS_L
  
     #------------------------
     # Processing Hourly Data
