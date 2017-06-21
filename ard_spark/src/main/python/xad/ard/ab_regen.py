@@ -19,10 +19,10 @@ from xad.common import system
 class ArdRegen(BaseArd):
     """A class for downloading tables from the POI database."""
 
-    def __init__(self, cfg, opt, status_log):
+    def __init__(self, cfg, opt):
         """Constructor"""
         BaseArd.__init__(self, cfg, opt)
-        self.status_log = status_log
+        self.status_log = self.STATUS_L
  
     #------------------------
     # Regenerating Hourly Data

@@ -61,6 +61,10 @@ def parse_arguments():
     parser.add_argument("--input_dir", help="input dir")
     parser.add_argument("--output_dir", help="output dir")
 
+    # Flags
+    parser.add_argument('-d', '--debug', action='store_true', help="Debug")
+    parser.add_argument('-n',  '--norun', action='store_true', help="No run.")
+
     # Parse the arguments
     opt = parser.parse_args()
     return(opt)

@@ -1,8 +1,8 @@
 #!/bin/sh
 #
-# Shell wrapper for xcp.py
+# Shell wrapper for ard.py
 #
-# Copyright (C) 2016.  xAd Inc.  All Rights Reserved.
+# Copyright (C) 2016,2017.  xAd Inc.  All Rights Reserved.
 #
 
 SHARE_DIR=/home/xad/share
@@ -10,29 +10,8 @@ PROJ_DIR=/home/xad/ard
 ANACONDA_HOME=/opt/anaconda
 MAIN=$PROJ_DIR/python/ard.py
 
-# # Select the RC files based on the OS
-# if [ -f /etc/centos-release ]; then
-#     EC2_RC=hadoop-ec2.rc
-#     RC=$SHARE_DIR/etc/$EC2_RC
-#     RC=$RC:$PROJ_DIR/etc/$EC2_RC
-# else 
-#     echo "ERROR - Unknown System"
-#     exit 1
-# fi
-# 
-# # Load the RC files
-# RC_LIST=$(echo $RC | tr ":" "\n");
-# for rc in $RC_LIST; do 
-#     if [ -f $rc ]; then
-#         echo "# Loading $rc ..."
-#         . $rc
-#     fi
-# done
-
-
 PATH=.:/home/xad/bin:$PROJ_DIR/bin:$PROJ_DIR/python:$ANACONDA_HOME/bin:$PATH
 export HADOOP_CLIENT_OPTS="-Djline.terminal=jline.UnsupportedTerminal"
 
 exec python2.7 $MAIN $*
-
 
