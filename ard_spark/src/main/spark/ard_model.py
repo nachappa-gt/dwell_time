@@ -367,7 +367,7 @@ class UserRequestMgr(object):
                 # Has a dominate cluster
                 for i in range(1,numClusters):
                     self.clusters[i].set_abnoamrl_state(AbnormalState.REMOTE_BAD)
-            elif w1 >= 5.0 or numClusters > 2:
+            else:
                 # Cannot identify a dominate cluster
                 for cluster in self.clusters:
                     cluster.set_abnoamrl_state(AbnormalState.REMOTE_CHAOTIC)
@@ -428,13 +428,13 @@ def process_partition(iterator):
     # Each row in the iterator is one request, it is a row object
     # Since they have been sorted by uid and r_timestamp already,
     # we only need to compare the consecutive requests.
-    pre_uid = None
+    prev_uid = None
     for row in iterator: 
 
         req = RequestRecord(row)
         curr_uid = req.get("uid")
         
-        if (pre_uid is None) or (prev_uid == curr_uid):
+        if (prev_uid is None) or (prev_uid == curr_uid):
             mgr.add_request(req)            
         else:  
             # Process requests on uid changes
@@ -443,6 +443,8 @@ def process_partition(iterator):
             # Reset for the new uid
             mgr = UserRequestMgr()
             mgr.add_request(req)
+            
+        prev_uid = curr_uid
 
     """Process the last uid"""
     if not mgr.isEmpty():
@@ -465,8 +467,8 @@ def parse_arguments():
     parser.add_argument("--hour", help="hour")    
     parser.add_argument("--input_dir", help="input dir")    
     parser.add_argument("--output_dir", help="outputdir")  
-    parser.add_argument("--sl_centroid_path", help="smartlocation ll centroids")  
-    parser.add_argument("--sl_ip_path", help="smartlocation IP changes")  
+    parser.add_argument("--sl_centroid_path", help="smartlocation ll centroids", default="")  
+    parser.add_argument("--sl_ip_path", help="smartlocation IP changes", default="")  
 
     # Flags
     parser.add_argument('-d', '--debug', action='store_true', help="Turn on debugging")

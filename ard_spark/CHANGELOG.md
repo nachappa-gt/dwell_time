@@ -1,3 +1,9 @@
+Release 1.0.6
+--------------
+- Fixed prev_uid
+- Added --nosl to skip centroid tagging.
+- Date: 2017-06-29
+
 Release 1.0.5
 --------------
 - Re-factoring with classes.
