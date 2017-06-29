@@ -46,6 +46,8 @@ class BaseArd(OptionContainer):
         self.opt = opt
         self.cfg = cfg
         self.STATUS_L = StatusLog(cfg, prefix='status_log_local')
+        self.FILL = None
+        self.SL = None
 
     def execute(self, cmd):
         """Execute a shell command and print output to STDOUT.

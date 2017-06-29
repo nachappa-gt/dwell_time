@@ -93,6 +93,7 @@ def parse_arguments():
     parser.add_argument('-nl', '--nolock', action='store_true', help="No locking")
     parser.add_argument('-nm', '--nomodel', action='store_true', help="No modeling")
     parser.add_argument('-n',  '--norun', action='store_true', help="No run.")
+    parser.add_argument('--nosl', action='store_true', help="No smart location.")
     parser.add_argument('-ns', '--nostatus', action='store_true', help="No status update.")
     parser.add_argument('--partial', action='store_true', help="Partial replacement.")
     

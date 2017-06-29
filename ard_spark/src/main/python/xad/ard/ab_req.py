@@ -95,17 +95,18 @@ class AbnormalRequest(BaseArd):
                         continue
 
                     # Check for SL hourly update (dependency)
-                    sl_hourly_key = self.getSLHourlyStatusLogKey(country)
-                    sl_status = self.status_log.getStatus(sl_hourly_key, date + "/" + hour)
-                    if (not sl_status and not self.FORCE):
-                        logging.info("x SKIP: missing status: {} {}/{}".format(sl_hourly_key, date, hour))
-                        break               
+                    if not self.NOSL:
+                        sl_hourly_key = self.getSLHourlyStatusLogKey(country)
+                        sl_status = self.status_log.getStatus(sl_hourly_key, date + "/" + hour)
+                        if (not sl_status and not self.FORCE):
+                            logging.info("x SKIP: missing status: {} {}/{}".format(sl_hourly_key, date, hour))
+                            break               
                     
                     # Get source sub-hour partitions
                     avro_path = self._get_science_core_avro_path(country, logtype, date, hour)
                     avro_subparts = self.getSubHourPartitions(avro_path, '-')
                     if len(avro_subparts) == 0:
-                        logging.debug("x SKIP: missing source {}".format(avro_path))
+                        logging.info("x SKIP: missing source {}: {}".format(avro_path, avro_subparts))
                         break                        
 
                     # Helper function
@@ -306,9 +307,13 @@ class AbnormalRequest(BaseArd):
         abd_path = self._get_abd_path(country, logtype, date, hour)
         
         # SL
-        sl_entries = self.findSLEntries(country, date, hour)
-        sl_centroid_path = self.getSLCombinedHourlyLLPaths(country, sl_entries)
-        sl_ip_path = self.getSLCombinedHourlyIPPaths(country, sl_entries)
+        if not self.NOSL:
+            sl_entries = self.findSLEntries(country, date, hour)
+            sl_centroid_path = self.getSLCombinedHourlyLLPaths(country, sl_entries)
+            sl_ip_path = self.getSLCombinedHourlyIPPaths(country, sl_entries)
+        else:
+            sl_centroid_path = ""
+            sl_ip_path = ""
 
 
         """Command to run Spark, abnormal request detection model is built in Spark"""
