@@ -64,7 +64,7 @@ class AbnormalRequest(BaseArd):
         if (self.PARTIAL):
             logging.info("- PARTIAL")   
 
-        keyPrefix = self.cfg.get('status_log_local.key.science_core_x')
+        keyPrefix = self.cfg.get('status_log_local.key.science_core_orc')
         daily_tag = self.cfg.get('status_log_local.tag.daily')
                 
         # Looping through all combinations
@@ -196,7 +196,7 @@ class AbnormalRequest(BaseArd):
         logging.info("- regions = {}".format(regions))
         #logging.info("- sl levels = {}".format(sl_levels))      
 
-        keyPrefix = self.cfg.get('status_log_local.key.science_core_x')
+        keyPrefix = self.cfg.get('status_log_local.key.science_core_orc')
                 
         """Looping through all combinations"""
         for date in dates:
@@ -247,7 +247,7 @@ class AbnormalRequest(BaseArd):
         logging.info("- hours = [{}]".format(",".join(hours)))
         logging.info("- regions = {}".format(regions))
 
-        keyPrefix = self.cfg.get('status_log_local.key.science_core_x')
+        keyPrefix = self.cfg.get('status_log_local.key.science_core_orc')
         daily_tag = self.cfg.get('status_log_local.tag.daily')
                 
         """Looping through all combinations"""
@@ -455,11 +455,100 @@ class AbnormalRequest(BaseArd):
         cmdStr = " ".join(cmd)
         system.execute(cmdStr, self.NORUN)
 
+        
+    def s3Push(self, daily=False):
+        logging.info("Pushing ORC to S3 (daily={})".format(daily))
+        
+        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
+        hours = self.getHours(daily)
+        regions = self.getRegions()
+        keyPrefix = self.cfg.get('status_log_local.key.science_core_orc')
+        hourly_s3put_tag = self.cfg.get('status_log_local.tag.s3put')
+        daily_orc_tag = self.cfg.get('status_log_local.tag.daily')
+        daily_s3put_tag = self.cfg.get('status_log_local.tag.daily_s3put')
+
+        logging.info("- dates = {}".format(dates))
+        logging.info("- hours = [{}]".format(",".join(hours)))
+        logging.info("- regions = {}".format(regions))
+
+        for date in dates:
+            for region in regions:
+                # Split region
+                (country,logtype) = self.splitRegion(region)
+                              
+                # Status keys
+                hourly_ORC = os.path.join(keyPrefix, country, logtype)
+                hourly_S3PUT = os.path.join(hourly_ORC, hourly_s3put_tag)
+                daily_ORC = os.path.join(hourly_ORC, daily_orc_tag)
+                daily_S3PUT = os.path.join(hourly_ORC, daily_s3put_tag)
+                
+                # Check desgination
+                s3p_status = self.status_log.getStatus(daily_S3PUT, date)
+                if (not self.FORCE and s3p_status is not None and s3p_status == 1) :
+                    logging.info("x SKIP: found daily s3put {} {}".format(daily_S3PUT, date))
+                    continue
+                
+                # Check source
+                num_hours = 0
+                if (daily):
+                    orc_status = self.status_log.getStatus(daily_ORC, date)
+                    if (orc_status is None or orc_status != 1):
+                        logging.info("x SKIP: missing daily ORC {} {}".format(daily_ORC, date))
+                        continue
+                    else:
+                        # Push to S3 through distcp
+                        self._s3Put_Helper(country, logtype, date)
+                        
+                        # Update status
+                        if (not self.NORUN and not self.NOSTATUS):
+                            for hour in hours:
+                                time = "{}/{}".format(date, hour)
+                                self.status_log.addStatus(hourly_S3PUT, time)
+                                num_hours += 1
+                
+                # Process hourly backup
+                else:
+                    for hour in hours:
+                        # Check destination
+                        time = "{}/{}".format(date, hour)
+                        s3p_status = self.status_log.getStatus(hourly_S3PUT, time)
+                        if (not self.FORCE and s3p_status is not None and s3p_status==1):
+                            logging.info("x SKIP: found {} {} {}".format(hourly_S3PUT, date, hour))
+                            num_hours += 1
+                            continue
+                        
+                        orc_status = self.status_log.getStatus(hourly_ORC, time)
+                        if (orc_status is None or orc_status != 1):
+                            logging.info("x SKIP: missing {} {} {}".format(hourly_ORC, date, hour))
+                            continue
+                        
+                        self._s3Put_Helper(country, logtype, date, hour)
+                        if (not self.NORUN and not self.NOSTATUS):
+                            self.status_log.addStatus(hourly_S3PUT, time)
+                            num_hours += 1
+          
+                # Update daily status                    
+                if (num_hours == 24 and not self.NOSTATUS):
+                    self.status_log.addStatus(daily_S3PUT, date)
 
 
-    #-------------------
-    # Helper Functions
-    #-------------------
+    def _s3Put_Helper(self, country, logtype, date, hour=None):
+        """Helper function to push files to S3"""
+        if hour is None:
+            hdfs_path = self._get_science_core_orc_path(country, logtype, date)
+            s3_path = self._get_science_core_orc_s3_path(country, logtype, date)            
+        else:
+            hdfs_path = self._get_science_core_orc_path(country, logtype, date, hour)
+            s3_path = self._get_science_core_orc_s3_path(country, logtype, date, hour)
+            
+        cmd = "hadoop distcp"
+        if (self.QUEUE):
+            cmd += " -Dmapred.job.queue.name={}".format(self.QUEUE)
+        cmd += " -update"
+        if (self.MAXMAPS):
+            cmd += " -m {}".format(self.MAXMAPS)
+        cmd += " {} {}".format(hdfs_path, s3_path)
+        system.execute(cmd, self.NORUN)    
 
         
     def mvHDFS(self, country, logtype, date, hour, partial=False):
@@ -504,3 +593,4 @@ class AbnormalRequest(BaseArd):
         altKey = baseKey
         countryKey = baseKey + "." + country
         return self.cfg.get(countryKey, altKey)
+

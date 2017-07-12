@@ -44,7 +44,7 @@ class ArdRegen(BaseArd):
         logging.info("- regions = {}".format(regions))
         #logging.info("- sl levels = {}".format(sl_levels))      
 
-        scx_key_base = self.cfg.get('status_log_local.key.science_core_x')
+        scx_key_base = self.cfg.get('status_log_local.key.science_core_orc')
         daily_tag = self.cfg.get('status_log_local.tag.daily')
         
         

@@ -82,7 +82,8 @@ def parse_arguments():
                         help="Log types (e.g. exchange, display, euwest1); aka product types")                        
     parser.add_argument('--output', help="Temporary HDFS output folders")
     parser.add_argument('-q', '--queue', help="YARN queue name")
-
+    parser.add_argument('-m', '--maxmaps', help="Max number of mappers for distcp",
+                        default="5")
     # Flags
     parser.add_argument('-d', '--debug', action='store_true', help="Turn on debugging")
     parser.add_argument('-f', '--force', action='store_true', help="Force run")

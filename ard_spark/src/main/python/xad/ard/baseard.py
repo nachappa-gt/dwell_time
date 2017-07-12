@@ -92,6 +92,10 @@ class BaseArd(OptionContainer):
         base_dir = self.cfg.get('hdfs.data.orc')
         return os.path.join(base_dir, country, logtype, *entries)
 
+    def _get_science_core_orc_s3_path(self, country, logtype, *entries):
+        """Get path to the ORC-based science foundation files"""
+        base_dir = self.cfg.get('s3.data.science_core_ex')
+        return os.path.join(base_dir, country, logtype, *entries)
 
     def _get_abd_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
@@ -176,9 +180,9 @@ class BaseArd(OptionContainer):
         return dateutil.expand(dateStr, fmt)
 
 
-    def getHours(self):
+    def getHours(self, daily=False):
         """Get the hours"""
-        if (self.HOUR):
+        if (self.HOUR and not daily):
             hourStr = self.HOUR
         else:
             hourStr = '00:23'
