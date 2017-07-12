@@ -1,3 +1,8 @@
+Release 1.1.0
+--------------
+- S3 backup
+- Date: 2017-07-11
+
 Release 1.0.6
 --------------
 - Fixed prev_uid

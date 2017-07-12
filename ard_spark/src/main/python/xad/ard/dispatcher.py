@@ -82,9 +82,17 @@ class Dispatcher(BaseArd):
             elif (cmdKey == ck.get('fixstatus')):
                 self.AR.fixStatusLog()
 
-            # TBD
+            # Push to S3
+            elif (cmdKey == ck.get('s3pd')):
+                self.AR.s3Push(daily=True)
+            elif (cmdKey == ck.get('s3ph')):
+                self.AR.s3Push(daily=False)
+
+            # Cleaning
             elif (cmdKey == ck.get('clean')):
                 logging.info("# ARD Cleaning... FIXME")
+                
+            # Monitoring
             elif (cmdKey == ck.get('mon')):
                 logging.info("# ARD Monitoring... FIXME")
 
