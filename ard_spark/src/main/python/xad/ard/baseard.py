@@ -74,7 +74,9 @@ class BaseArd(OptionContainer):
 
         return output
 
-
+    #---------
+    # Path
+    #---------
     def getHDFSUserTmpDir(self, app='ard', tmpRoot='/tmp'):
         """Get a user-specific tmp directory, e.g. /tmp/ard-xad."""
         appUserFolder = "-".join([app, getpass.getuser()])
@@ -97,6 +99,11 @@ class BaseArd(OptionContainer):
         base_dir = self.cfg.get('s3.data.science_core_ex')
         return os.path.join(base_dir, country, logtype, *entries)
 
+    def _get_science_core_orc_s3n_path(self, country, logtype, *entries):
+        """Get path to the ORC-based science foundation files"""
+        base_dir = self.cfg.get('s3n.data.science_core_ex')
+        return os.path.join(base_dir, country, logtype, *entries)
+
     def _get_abd_path(self, country, logtype, *entries):
         """Get path to the ORC-based science foundation files"""
         base_dir = self.cfg.get('hdfs.prod.abd')
@@ -109,9 +116,48 @@ class BaseArd(OptionContainer):
         return os.path.join(base_dir, "WIP_" + folder)        
 
 
+    #------------------
+    # Status Log Keys
+    #------------------
+    def get_orc_status_key(self, country, logtype, daily=False):
+        """Get status_log key for ORC generation"""
+        prefix = self.cfg.get('status_log_local.key.science_core_orc')
+        tag = self.cfg.get('status_log_local.tag.daily') if daily else ""
+        if (tag):
+            key = os.path.join(prefix, country, logtype, tag)
+        else:
+            key = os.path.join(prefix, country, logtype)
+        return key
+
+    def get_s3put_status_key(self, country, logtype, daily=False):
+        """Get status_log key for S3 Put"""
+        prefix = self.cfg.get('status_log_local.key.science_core_s3put')
+        tag = self.cfg.get('status_log_local.tag.s3put.daily') if daily else\
+            self.cfg.get('status_log_local.tag.s3put')  
+        if (tag):
+            key = os.path.join(prefix, country, logtype, tag)
+        else:
+            key = os.path.join(prefix, country, logtype)
+        return key
+
+    def get_s3hive_status_key(self, country, logtype, daily=False):
+        """Get status_log key for adding a S3 Partition in Hive"""
+        prefix = self.cfg.get('status_log_local.key.science_core_s3hive')
+        tag = self.cfg.get('status_log_local.tag.s3hive.daily') if daily else\
+            self.cfg.get('status_log_local.tag.s3hive')  
+        if (tag):
+            key = os.path.join(prefix, country, logtype, tag)
+        else:
+            key = os.path.join(prefix, country, logtype)
+        return key
 
 
 
+
+
+    #------------------
+    # Main Partitions
+    #------------------
 
     def getCountries(self, key='default.countries'):
         """Get a list of countries"""
@@ -188,6 +234,10 @@ class BaseArd(OptionContainer):
             hourStr = '00:23'
         return hourutil.expand(hourStr)
 
+
+    #------------------
+    # Sub-Partitions
+    #------------------
 
     def getFillFolders(self):
         """Get the fill/nf folders.  Exclude fill if hasFill is false"""
@@ -301,8 +351,7 @@ class BaseArd(OptionContainer):
         return query;
 
 
-    def makeDropPartitionQuery(self, table_name, cntry, prod_type, dt, hour,
-                               subparts):
+    def makeDropPartitionQuery(self, table_name, cntry, prod_type, dt, hour):
         """Create a Hive query for dropping partitions
         
         Create a Hive query for dropping partitions.
@@ -313,28 +362,23 @@ class BaseArd(OptionContainer):
         - cntry: country
         - prod_type: product type
         - dt: date, in the format of yyyy-MM-dd
-        - hour: in the format of 'hh'
-        - subparts: a list of [fill,loc_score] pairs.
-        - locations: a list of locations matching subparts.
-        
-        TODO: Generalized and put in HiveCommand module.
+        - hour: in the format of 'hh'        
         """
         
-        spec = self.makePartitionSpec(cntry, prod_type, dt, hour, subparts)
+        spec = self.makePartitionSpec(cntry, prod_type, dt, hour)
         query = "ALTER TABLE {} DROP IF EXISTS\n  {};".format(table_name, spec)        
         return query;
 
 
-    def makePartitionSpec(self, cntry, prod_type, dt, hour, subparts,
+    def makePartitionSpec(self, cntry, prod_type, dt, hour, subparts=None,
                           locations=None):
         """Generate the partition spec
         
         Note that the it may be involved with multiple partitions
         delimited by commas"""
 
-        spec = ""
         dt = dateutil.convert(dt, 'yyyy-MM-dd')
-        num_parts = len(subparts)
+        num_parts = len(subparts) if (subparts) else 0
         has_locations = False;
         if (locations is not None):
             if (len(locations) == num_parts):
@@ -343,21 +387,30 @@ class BaseArd(OptionContainer):
                 #logging.error("Locations does not match subparts")  
                 pass
         
-        for i in range(num_parts):
-            # Handle partition spec delimiters
-            if (i > 0):
-                spec += "\n  " if has_locations else ",\n  " 
-                
-            p = subparts[i]
+        spec = ""
+        if (num_parts == 0):
+            # Don't need to include sub-parts for dropping
             spec += "PARTITION (cntry='{}', ".format(cntry)
             spec += "prod_type='{}', ".format(prod_type)
-            spec += "dt='{}', hour='{}', ".format(dt, hour)
-            spec += "fill='{}', loc_score='{}')".format(p[0], p[1])    
-            
-            # Handle locations
-            if (has_locations):
-                loc = locations[i]
-                spec += "\n    LOCATION '{}'".format(loc)    
+            spec += "dt='{}', hour='{}')".format(dt, hour)            
+        else:
+            for i in range(num_parts):
+                # Handle partition spec delimiters
+                if (i > 0):
+                    spec += "\n  " if has_locations else ",\n  " 
+                    
+                spec += "PARTITION (cntry='{}', ".format(cntry)
+                spec += "prod_type='{}', ".format(prod_type)
+                spec += "dt='{}', hour='{}', ".format(dt, hour)
+
+                # Sub parts
+                p = subparts[i]
+                spec += "fill='{}', loc_score='{}')".format(p[0], p[1])    
+                
+                # Handle locations
+                if (has_locations):
+                    loc = locations[i]
+                    spec += "\n    LOCATION '{}'".format(loc)    
                 
         return spec;        
 
@@ -380,15 +433,18 @@ class BaseArd(OptionContainer):
     def addHivePartitions(self, country, logtype, date,
                           hour, subparts, hourly_path):
         """Add Hive partitions"""
-        table_name =  self.cfg.get('ard.output.table');
-        locations = [os.path.join(hourly_path, p[0], p[1]) for p in subparts]
         
-        # Make query
-        dropQuery = self.makeDropPartitionQuery(table_name, country, logtype, date,
-                                                hour, subparts)
-        addQuery = self.makeAddPartitionQuery(table_name, country, logtype, date,
-                                      hour, subparts, locations)
-        query = dropQuery + "\n" + addQuery
+        # Drop existing partitions
+        table_name =  self.cfg.get('ard.output.table');
+        query = self.makeDropPartitionQuery(table_name, country, logtype,
+                                            date, hour)                   
+        # Add new partitions                         
+        if len(subparts) > 0:
+            loc = [os.path.join(hourly_path, p[0], p[1]) for p in subparts]
+            addQuery = self.makeAddPartitionQuery(table_name, country, logtype,
+                                                  date, hour, subparts, loc)
+            query += "\n" + addQuery
+
         self.runHiveQuery(query)
 
 
@@ -498,9 +554,9 @@ class BaseArd(OptionContainer):
         return missing_parts
 
 
-    #-----------
+    #-------------
     # SL Related
-    #-----------
+    #-------------
     def getSLHourlyLLPath(self, country, *entries):
         base_dir = self.cfg.get('sl.output.dir')
         folder = self.cfg.get('sl.hourly.ll.folder')
@@ -648,8 +704,8 @@ def _test_queries(base):
     logging.info("subparts = {}".format(subparts))
     
     # Drop
-    dropQuery = base.makeDropPartitionQuery(table_name, country, logtype, date,
-                                            hour, subparts)
+    dropQuery = base.makeDropPartitionQuery(table_name, country, logtype,
+                                            date, hour)
     logging.info("QUERY = {}".format(dropQuery))
     
     # Add

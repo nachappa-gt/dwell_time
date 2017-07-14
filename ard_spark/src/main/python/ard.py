@@ -29,7 +29,8 @@ from xad.ard.dispatcher import Dispatcher
 # Constants
 DEFAULT_CONFIG_DIRS = "/home/xad/ard/config:/home/xad/share/config"
 DEFAULT_CONFIG_FILE = "ard.properties"
-DEFAULT_ALERT_EMAIL = 'science-ops@xad.com'
+#DEFAULT_ALERT_EMAIL = 'science-ops@xad.com'
+DEFAULT_ALERT_EMAIL = 'victor.chu@xad.com'
 DEFAULT_EMAIL_PRIORITY = '0'
 DEBUG = False
 
@@ -55,6 +56,7 @@ COMMANDS:
     
 """
 conf = None
+opt = None
 
 
 def parse_arguments():
@@ -97,7 +99,7 @@ def parse_arguments():
     parser.add_argument('--nosl', action='store_true', help="No smart location.")
     parser.add_argument('-ns', '--nostatus', action='store_true', help="No status update.")
     parser.add_argument('--partial', action='store_true', help="Partial replacement.")
-    
+    parser.add_argument('--full', action='store_true', help="Use full sub-partitions.")    
 
     opt = parser.parse_args()
     return(opt)
@@ -140,7 +142,7 @@ def exceptionHandler(e):
 
     # Get parameters from the configuration if it is available.
     host = socket.gethostname();
-    if (conf):
+    if conf:
         to_addr = conf.get('alert.email')
         priority = conf.get('alert.email.priority')
         if (conf.has('local.host.id')):
@@ -149,7 +151,7 @@ def exceptionHandler(e):
         to_addr = DEFAULT_ALERT_EMAIL
         priority = DEFAULT_EMAIL_PRIORITY
 
-    if (opt):
+    if opt:
         noemail = opt.noemail or opt.norun
     else:
         noemail = False
