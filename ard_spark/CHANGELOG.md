@@ -1,6 +1,12 @@
+Release 1.1.1
+--------------
+- s3hive: use s3 as hive partitions
+- fixrep: fix repeated loc_score folders like rest/rest and pos/pos.
+- Date: 2017-07-14
+
 Release 1.1.0
 --------------
-- S3 backup
+- s3put: S3 backup
 - Date: 2017-07-11
 
 Release 1.0.6

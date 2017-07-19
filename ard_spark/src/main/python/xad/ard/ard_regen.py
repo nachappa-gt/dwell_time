@@ -17,7 +17,7 @@ from xad.common import system
 
 
 class ArdRegen(BaseArd):
-    """A class for downloading tables from the POI database."""
+    """Regenerate ARD.  Why need this class?"""
 
     def __init__(self, cfg, opt):
         """Constructor"""
@@ -43,9 +43,6 @@ class ArdRegen(BaseArd):
         logging.info("- hours = [{}]".format(",".join(hours)))
         logging.info("- regions = {}".format(regions))
         #logging.info("- sl levels = {}".format(sl_levels))      
-
-        scx_key_base = self.cfg.get('status_log_local.key.science_core_orc')
-        daily_tag = self.cfg.get('status_log_local.tag.daily')
         
         
         """Looping through all combinations"""
@@ -66,7 +63,6 @@ class ArdRegen(BaseArd):
                 year = dates[0]
                 month = dates[1]
                 day = dates[2]
-                hour_count = 0
 
                 for hour in hours:
                     """Check hourly gen status""" 
@@ -158,6 +154,7 @@ class ArdRegen(BaseArd):
                 """Touch daily status"""
                 """if (hour_count == 24):
                     self.status_log.addStatus(daily_key, date)"""
+
 
     def run_spark_orc(self,country,logtype,year,month,day,hour,avro_partitions):
         """Run Spark model to generate abnormal request_id"""

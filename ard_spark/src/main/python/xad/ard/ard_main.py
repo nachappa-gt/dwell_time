@@ -16,17 +16,18 @@ ABD_MAP = {'fill=FILLED':'fill', 'fill=NOT_FILLED':'nf',
            'loc_score=95':'tll', 'loc_score=94':'pos'}
 
 
-class AbnormalRequest(BaseArd):
+class ArdMain(BaseArd):
     """A class for downloading tables from the POI database."""
 
     def __init__(self, cfg, opt):
         """Constructor"""
         BaseArd.__init__(self, cfg, opt)
         self.status_log = self.STATUS_L
+        
+
     #------------------------
     # Processing Hourly Data
     #------------------------
-
     def genHourly(self):
         """Generate updated Science Core orc table with new features in it. 
         
@@ -173,119 +174,6 @@ class AbnormalRequest(BaseArd):
             else:
                 self.addHivePartitions(country, logtype, date, hour,
                                        orc_subparts, orc_path)
-
-
-    def fixMissing(self):
-        """Fixing missing sub-hour partitions with empty folders
-        
-        The older code may missing some partition folders if they
-        are empty.   This method will fill those folders and
-        add them to the Hive partition.
-        """
-        
-        logging.info('Fixing Missing Folders...')
-
-        """ Get parameters"""
-        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
-        hours = self.getHours()
-        regions = self.getRegions()
-        #sl_levels = self.getSLLevels()
-
-        logging.info("- dates = {}".format(dates))
-        logging.info("- hours = [{}]".format(",".join(hours)))
-        logging.info("- regions = {}".format(regions))
-        #logging.info("- sl levels = {}".format(sl_levels))      
-
-        keyPrefix = self.cfg.get('status_log_local.key.science_core_orc')
-                
-        """Looping through all combinations"""
-        for date in dates:
-            for region in regions:
-                (country,logtype) = self.splitRegion(region)
-
-                # Find missing sub partitions
-                day_path = self._get_science_core_orc_path(country, logtype, date)
-                missing_hour_subparts = self.findMissingPartitions(day_path) 
-                               
-                num_hours = len(missing_hour_subparts)
-                if num_hours == 0:
-                    logging.info("x SKIP - NO MISSING PARTS for {} {}".format(region, date))
-                    continue;
-                else:
-                    logging.info("## FIXING {} HOURS for {} {}...".format(num_hours, region,date))
-                               
-                # Status log key
-                hourly_key = os.path.join(keyPrefix, country, logtype)
-
-                for hour, missing_subparts in missing_hour_subparts:
-                    # Won't proceeed unless there this hour has been processed
-                    logging.info("# FIXING: " + country + ',' + logtype +',' + date + ',' + hour)
-                    hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
-                    if (hourly_status is None or hourly_status != 1):
-                        logging.debug("x SKIP: missing {} {}:{}".format(hourly_key, date, hour))
-                        break
-
-                    # Get source sub-hour partitions
-                    orc_path = self._get_science_core_orc_path(country, logtype, date, hour)
-                    self.addMissingHDFSPartitions(orc_path, missing_subparts)
-
-                    # Add Hive partitions
-                    self.addHivePartitions(country, logtype, date, hour,
-                                           missing_subparts, orc_path)
-
-
-    def fixStatusLog(self):
-        """Add status log for for those with data"""
-        logging.info('Fixing Status Log...')
-
-        """ Get parameters"""
-        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
-        hours = self.getHours()
-        regions = self.getRegions()
-
-        logging.info("- dates = {}".format(dates))
-        logging.info("- hours = [{}]".format(",".join(hours)))
-        logging.info("- regions = {}".format(regions))
-
-        keyPrefix = self.cfg.get('status_log_local.key.science_core_orc')
-        daily_tag = self.cfg.get('status_log_local.tag.daily')
-                
-        """Looping through all combinations"""
-        for date in dates:
-            for region in regions:
-                (country,logtype) = self.splitRegion(region)
-                                               
-                # Status log key
-                hourly_key = os.path.join(keyPrefix, country, logtype)
-                daily_key = os.path.join(hourly_key, daily_tag)
-
-                hour_count = 0
-                for hour in hours:
-                    # Skip if there is already a status log
-                    hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
-                    if (hourly_status):
-                        logging.info("x SKIP:  Found atatus {} {}/{}".format(hourly_key, date, hour))
-                        hour_count += 1
-                        continue
-
-                    # Get source sub-hour partitions
-                    orc_path = self._get_science_core_orc_path(country, logtype, date, hour)
-                    if (self.FORCE or hdfs.has(orc_path)):                  
-                        logging.info("+ Adding Hourly: {} {}/{}".format(hourly_key, date, hour))
-                        if (not self.NORUN):              
-                            self.status_log.addStatus(hourly_key, date + "/" + hour)                        
-                        hour_count += 1
-                    else:
-                        logging.info("x SKIP: not ORC in {}".format(orc_path))
-                        break
-
-                # Touch daily status
-                if (hour_count == 24):
-                    daily_status = self.status_log.getStatus(daily_key, date)
-                    if (not daily_status):
-                        logging.info("+ Adding DAILY: {} {}".format(hourly_key, date))
-                        if (not self.NORUN):
-                            self.status_log.addStatus(daily_key, date)
 
 
     def run_spark_model(self, country, logtype, date, hour):
@@ -456,17 +344,16 @@ class AbnormalRequest(BaseArd):
         system.execute(cmdStr, self.NORUN)
 
         
+    #---------------
+    # S3 Backup
+    #---------------
+
     def s3Push(self, daily=False):
         logging.info("Pushing ORC to S3 (daily={})".format(daily))
         
         dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
         hours = self.getHours(daily)
         regions = self.getRegions()
-        keyPrefix = self.cfg.get('status_log_local.key.science_core_orc')
-        hourly_s3put_tag = self.cfg.get('status_log_local.tag.s3put')
-        daily_orc_tag = self.cfg.get('status_log_local.tag.daily')
-        daily_s3put_tag = self.cfg.get('status_log_local.tag.daily_s3put')
-
         logging.info("- dates = {}".format(dates))
         logging.info("- hours = [{}]".format(",".join(hours)))
         logging.info("- regions = {}".format(regions))
@@ -477,23 +364,23 @@ class AbnormalRequest(BaseArd):
                 (country,logtype) = self.splitRegion(region)
                               
                 # Status keys
-                hourly_ORC = os.path.join(keyPrefix, country, logtype)
-                hourly_S3PUT = os.path.join(hourly_ORC, hourly_s3put_tag)
-                daily_ORC = os.path.join(hourly_ORC, daily_orc_tag)
-                daily_S3PUT = os.path.join(hourly_ORC, daily_s3put_tag)
+                orc_hourly_key = self.get_orc_status_key(country, logtype)
+                orc_daily_key = self.get_orc_status_key(country, logtype, True)
+                s3p_hourly_key = self.get_s3put_status_key(country, logtype)
+                s3p_daily_key = self.get_s3put_status_key(country, logtype, True)
                 
                 # Check desgination
-                s3p_status = self.status_log.getStatus(daily_S3PUT, date)
+                s3p_status = self.status_log.getStatus(s3p_daily_key, date)
                 if (not self.FORCE and s3p_status is not None and s3p_status == 1) :
-                    logging.info("x SKIP: found daily s3put {} {}".format(daily_S3PUT, date))
+                    logging.info("x SKIP: found daily s3put {} {}".format(s3p_daily_key, date))
                     continue
                 
                 # Check source
                 num_hours = 0
                 if (daily):
-                    orc_status = self.status_log.getStatus(daily_ORC, date)
+                    orc_status = self.status_log.getStatus(orc_daily_key, date)
                     if (orc_status is None or orc_status != 1):
-                        logging.info("x SKIP: missing daily ORC {} {}".format(daily_ORC, date))
+                        logging.info("x SKIP: missing daily ORC {} {}".format(orc_daily_key, date))
                         continue
                     else:
                         # Push to S3 through distcp
@@ -502,8 +389,8 @@ class AbnormalRequest(BaseArd):
                         # Update status
                         if (not self.NORUN and not self.NOSTATUS):
                             for hour in hours:
-                                time = "{}/{}".format(date, hour)
-                                self.status_log.addStatus(hourly_S3PUT, time)
+#                                time = "{}/{}".format(date, hour)
+#                                self.status_log.addStatus(s3p_hourly_key, time)
                                 num_hours += 1
                 
                 # Process hourly backup
@@ -511,25 +398,25 @@ class AbnormalRequest(BaseArd):
                     for hour in hours:
                         # Check destination
                         time = "{}/{}".format(date, hour)
-                        s3p_status = self.status_log.getStatus(hourly_S3PUT, time)
+                        s3p_status = self.status_log.getStatus(s3p_hourly_key, time)
                         if (not self.FORCE and s3p_status is not None and s3p_status==1):
-                            logging.info("x SKIP: found {} {} {}".format(hourly_S3PUT, date, hour))
+                            logging.info("x SKIP: found {} {} {}".format(s3p_hourly_key, date, hour))
                             num_hours += 1
                             continue
                         
-                        orc_status = self.status_log.getStatus(hourly_ORC, time)
+                        orc_status = self.status_log.getStatus(orc_hourly_key, time)
                         if (orc_status is None or orc_status != 1):
-                            logging.info("x SKIP: missing {} {} {}".format(hourly_ORC, date, hour))
+                            logging.info("x SKIP: missing {} {} {}".format(orc_hourly_key, date, hour))
                             continue
                         
                         self._s3Put_Helper(country, logtype, date, hour)
                         if (not self.NORUN and not self.NOSTATUS):
-                            self.status_log.addStatus(hourly_S3PUT, time)
+                            self.status_log.addStatus(s3p_hourly_key, time)
                             num_hours += 1
           
                 # Update daily status                    
                 if (num_hours == 24 and not self.NOSTATUS):
-                    self.status_log.addStatus(daily_S3PUT, date)
+                    self.status_log.addStatus(s3p_daily_key, date)
 
 
     def _s3Put_Helper(self, country, logtype, date, hour=None):
@@ -550,7 +437,76 @@ class AbnormalRequest(BaseArd):
         cmd += " {} {}".format(hdfs_path, s3_path)
         system.execute(cmd, self.NORUN)    
 
+
+    #------------------------
+    # S3 Partition on Hive
+    #------------------------
+    def s3Hive(self, daily=False):
+        """Modify Hive partitions to point ORC data in S3"""
+
+        logging.info("S3 Locations in Hive Partitions")
         
+        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
+        hours = self.getHours(daily)
+        regions = self.getRegions()
+        logging.info("- dates = {}".format(dates))
+        logging.info("- hours = [{}]".format(",".join(hours)))
+        logging.info("- regions = {}".format(regions))
+
+        for date in dates:
+            for region in regions:
+                # Split region
+                (country,logtype) = self.splitRegion(region)
+                              
+                # Status keys
+                s3put_daily_key = self.get_s3put_status_key(country, logtype, True)
+                s3hive_hourly_key = self.get_s3hive_status_key(country, logtype)
+                s3hive_daily_key = self.get_s3hive_status_key(country, logtype, True)
+    
+                # Check desgination (daily)
+                s3h_daily_status = self.status_log.getStatus(s3hive_daily_key, date)
+                if (s3h_daily_status and not self.FORCE) :
+                    logging.info("x SKIP: found {} {}".format(s3hive_daily_key, date))
+                    continue
+
+                # Check source status (daily)
+                s3p_daily_status = self.status_log.getStatus(s3put_daily_key, date)
+                if (daily and not s3p_daily_status):
+                    logging.info("x SKIP: MISSING {} {}".format(s3put_daily_key, date))
+                    continue
+                
+                # Process hourly
+                num_hours = 0
+                for hour in hours:
+                    # Check target status (hourly)
+                    time = os.path.join(date, hour)
+                    status = self.status_log.getStatus(s3hive_hourly_key, time)
+                    if (status and not self.FORCE):
+                        logging.info("x SKIP: found {} {} {}".format(s3hive_hourly_key, date, hour))
+                        num_hours += 1
+                        continue
+
+                    # Change Partitions
+                    s3n_path = self._get_science_core_orc_s3n_path(country, logtype, date, hour)
+                    if (self.QUICK):
+                        # Use --fill to avoid s3 lookup.
+                        hasFill = False if logtype == 'display_dr' else True
+                        subparts = self.makeFullSubHourPartitions(hasFill)                            
+                    else:
+                        subparts = self.getSubHourPartitions(s3n_path) 
+                           
+                    self.addHivePartitions(country, logtype, date, hour,
+                                           subparts, s3n_path)
+
+                    # Hourly Status
+                    if (not self.NORUN):
+                        num_hours += 1
+                        self.status_log.addStatus(s3hive_hourly_key, time)
+
+                if (num_hours == 24): 
+                    self.status_log.addStatus(s3hive_daily_key, date)
+
+
     def mvHDFS(self, country, logtype, date, hour, partial=False):
         """Move completed data from tmp folder to target location.
         
