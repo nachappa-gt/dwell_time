@@ -99,7 +99,8 @@ def parse_arguments():
     parser.add_argument('--nosl', action='store_true', help="No smart location.")
     parser.add_argument('-ns', '--nostatus', action='store_true', help="No status update.")
     parser.add_argument('--partial', action='store_true', help="Partial replacement.")
-    parser.add_argument('--full', action='store_true', help="Use full sub-partitions.")    
+    parser.add_argument('--quick', action='store_true', 
+                        help="Quick partition creation for s3hive; no s3 check.")    
 
     opt = parser.parse_args()
     return(opt)
