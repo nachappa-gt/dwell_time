@@ -105,7 +105,11 @@ CREATE EXTERNAL TABLE `science_core_orc`(
   `filter_weight` double,
   `parcel_ids` array<string>,
   `cookie_uid` string,
-  `matched_poitags` array<struct<proximity_mode:int,postags:array<struct<poitag:int,namespace:int,can_target:boolean,can_measure:boolean>>,weight:float,hash_key:string,is_poly:int,block_id:int>>)
+  `matched_poitags` array<struct<proximity_mode:int,postags:array<struct<poitag:int,namespace:int,can_target:boolean,can_measure:boolean>>,weight:float,hash_key:string,is_poly:int,block_id:int>>,
+  `location_extensions` struct<ha:double,va:double,alt:double,floor:int,speed:double,direction:double>,
+  `isp_match` struct<proximity_mode:int,fp_sic:string,poi_hash_key:string,brand_id:int>, 
+  `beacons` array<struct<protocol:string,type:int,id1:string,id2:string,id3:string,proximity:string,signal_strength:int,distance:double,description:string,url:string>>
+  )
 
 PARTITIONED BY (
   `cntry` string,
