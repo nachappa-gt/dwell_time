@@ -94,7 +94,7 @@ def merge(hiveContext,country, logtype, date, hour, fill, loc_score,
         'tracking_user_ip','fp_matches', 'connection_type', 'geo_type',
         'app_site_domain', 'dnt', 'geo_block_id', 
         # 91-
-        'event_count', 'filter_weight','parcel_ids', 'cookie_uid','matched_poitags',
+        'event_count', 'filter_weight','parcel_ids', 'cookie_uid', 'matched_poitags',
         'location_extensions', 'isp_match', 'beacons'
         )
 

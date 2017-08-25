@@ -21,6 +21,10 @@ import json
 import logging
 import os
 
+import operator
+import math
+import numpy as np
+
 from math import sin, cos, sqrt, atan2, radians
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
@@ -43,11 +47,13 @@ class AbnormalState():
     NON_94_IP = 6
 
 
-# Visit State (for Hayoung)
+# Visit State 
 class VisitState():
     VISIT_BEGIN = 1
     VISIT_CONTINUED = 2
-    INVALID = 3
+    VISIT_END = 3
+    VISIT_BEGIN_AND_END = 4
+    INVALID = 5
 
 
 class Location(object):
@@ -135,7 +141,7 @@ class RequestRecord(object):
         self.loc = Location(float(self.row['latitude']), float(self.row['longitude']))
         # States
         self.abnormal_state = None
-        self.visit_state = None   # TODO For Hayoung
+        self.visit_state = None
 
     def is_abnormal(self):
         """Check if the record is in a n abnormal state other than GOOD"""
@@ -177,9 +183,7 @@ class RequestRecord(object):
         
         # Handle visit_state
         if (self.visit_state):
-            # FIXME - Hayoung
-            pass
-        
+            j["vis_info"] = self.visit_state 
         # Convert JSON object to a JSON string
         r_s_info = json.dumps(j)     
 
@@ -384,13 +388,72 @@ class UserRequestMgr(object):
             
         # Identify the major cluster and tag abnormal requests
         self._tag_abnormal_requests()
-
-
+#
     def identify_valid_visitations(self):
         """ Identify valid POI visitations
         """
-        # FIXME: Hayoung
-        pass    
+        filtered_requests = list()
+        for req in self.requests :
+            if (req.abnormal_state >= 1) :
+                continue
+            filtered_requests.append(req) # exclued abnormal requests 
+        
+        # build list of pois with proximity 1
+        poi_visits = buildPoiVisits(filtered_requests)
+        if (len(poi_visits) == 0) :
+            return
+        # check validity of poi visit for each poi
+        valid_individual_visits = validPoiVisits(filtered_requests, poi_visits)
+        # check validity of multiple poi visits at the same time - overlapping visits? pick one
+        poi_visits = pickFinalValidVisits(valid_individual_visits)
+        # tag valid visits
+        self._tag_valid_visits(poi_visits)
+
+    def _tag_valid_visits(self, poi_visits):
+        """ tag each request if their visitation is classified as true(begin/continued/end) or false(invalid). If not enough info - return null"""
+        vis_info = [None] * len(self.requests) 
+        
+        for poi_visit in poi_visits :
+            if (poi_visit.isValid == True) :
+                if (poi_visit.start_idx == poi_visit.end_idx) :
+                    info = [(poi_visit.poi, VisitState.VISIT_BEGIN_AND_END)]
+                    if (vis_info[poi_visit.start_idx] == None) :
+                            vis_info[poi_visit.start_idx] = info
+                    else :
+                        vis_info[poi_visit.start_idx].append(info)
+                        
+                else :
+                    for i in range(poi_visit.start_idx, poi_visit.end_idx+1) :
+
+                        if (i == poi_visit.start_idx) :
+                            info = [(poi_visit.poi, VisitState.VISIT_BEGIN)]
+                        elif (i == poi_visit.end_idx) :
+                            info = [(poi_visit.poi, VisitState.VISIT_END)]
+                        else :
+                            info = [(poi_visit.poi, VisitState.VISIT_CONTINUED)]
+
+
+                        if (vis_info[i] == None) :
+                            vis_info[i] = info
+                        else :
+                            vis_info[i].append(info)
+                        
+            elif (poi_visit.isValid == False) :
+                info = [(poi_visit.poi, VisitState.INVALID)]
+                for i in range(poi_visit.start_idx, poi_visit.end_idx+1) :
+                    
+                    if (vis_info[i] == None) :
+                        vis_info[i] = info
+                    else :
+                        vis_info[i].append(info)
+        
+        for i in range(len(self.requests)) :
+            req = self.requests[i]
+            if (vis_info[i] is not None) :
+                #if (req.abnormal_state is not None) :
+                req.visit_state = vis_info[i]
+
+
 
 
     def get_outputs(self, retvals):
@@ -406,7 +469,8 @@ class UserRequestMgr(object):
         """Group user requests into clusters"""
 
         self.identify_abnormal_requests()
-        self.identify_valid_visitations()
+        # identify valid/invalid visitations 
+        #self.identify_valid_visitations()
         
         if retvals is not None:
             self.get_outputs(retvals)
@@ -452,6 +516,264 @@ def process_partition(iterator):
 
     return retvals
 
+
+class PoiVisit :
+    
+    def __init__(self, poi, start_time=None, end_time=None, start_idx=None, 
+                 end_idx=None, latlon_list=list(), isValid=None, last_lat=None, last_lon=None) :
+        self.poi = poi
+        self.start_time = start_time
+        self.end_time = end_time
+        self.start_idx = start_idx
+        self.end_idx = end_idx
+        self.latlon_list = latlon_list
+        self.isValid = isValid
+        self.last_lat = last_lat
+        self.last_lon = last_lon
+    
+    def getVisitDuration(self) :
+        duration = (self.end_time - self.start_time) / 1000.0
+        return duration
+    
+    def getNumUniqLocs(self) :
+        return len(set(self.latlon_list))
+
+    def __str__(self) :
+        return "Poi:{}, start_idx:{}, end_idx:{}, isValid:{}".format(self.poi, self.start_idx, self.end_idx, self.isValid)
+    
+def buildPoiVisits(requests) :
+    """ build poi visit information from requests """
+    # find all the POIs visited with proximity mode 1 from the requests(filtered requests)
+    poi_prox1_list = list()
+    for req in requests :
+        fpMatches = req.get('fp_matches')
+        
+        if (fpMatches is not None) :
+            for fp in fpMatches :
+                prox = fp['proximity_mode']
+                
+                if (prox == 1) :
+                    poi = fp['hash_key']
+                    
+                    if (poi not in poi_prox1_list) :
+                        poi_prox1_list.append(poi)
+                        
+    # build PoiVisit-visit information for each poi
+    poi_visits = list()
+    for poi in poi_prox1_list :
+        isVisitContinued = False
+        
+        for i in range(len(requests)) :
+            req = requests[i]
+            fpMatches = req.get('fp_matches')
+            
+            isPOIProx1 = False
+            if (fpMatches is not None) :
+                for fp in fpMatches :
+                    if ((fp['proximity_mode'] == 1) and (fp['hash_key'] == poi)) :
+                        
+                        if (isVisitContinued == False) :
+                            poi_visit = PoiVisit(poi)
+                            isVisitContinued = True
+                            
+                        isPOIProx1 = True
+                        ts = req.get('r_timestamp')
+                        
+                        if (poi_visit.start_time == None) :
+                            poi_visit.start_time = ts
+                            poi_visit.start_idx = i
+                        poi_visit.end_time = ts
+                        poi_visit.end_idx = i
+                        
+                        poi_visit.latlon_list.append((req.get('latitude'), req.get('longitude')))
+                        poi_visit.last_lat = req.get('latitude')
+                        poi_visit.last_lon = req.get('longitude')
+            # fp_matches is empty or poi is not appeared as proximity 1 : check lat/lon - is it close enough? more like caused by noise? => include as visit           
+            if ((fpMatches == None) or (~isPOIProx1)) : 
+                if (isVisitContinued == False) :
+                    continue
+                
+                cur_lat = req.get('latitude')
+                cur_lon = req.get('longitude')
+                
+                dist = distance_meter(poi_visit.last_lat, poi_visit.last_lon, cur_lat, cur_lon)
+                
+                if (dist < 5.0) :
+                    ts = req.get('r_timestamp')
+                    poi_visit.end_time = ts
+                    poi_visit.end_idx = i
+                    poi_visit.latlon_list.append((cur_lat, cur_lon))
+                else :
+                    poi_visits.append(poi_visit)
+                    isVisitContinued = False
+                    
+        # after looking at all requests
+        if ((poi_visit.start_time != None) and (isVisitContinued ==True)):
+            poi_visits.append(poi_visit)
+        
+    return poi_visits
+
+def validPoiVisits(filtered_requests, poi_visits) :
+    """ check validity of each poi visit(independently)"""
+    for poi_visit in poi_visits :
+        
+        prev_idx = max(0, poi_visit.start_idx-1)
+        prev_exists = False
+        prev_valid = None
+        estTimeToAdd = 0
+        
+        # check the speed of movement into the poi
+        if (prev_idx < poi_visit.start_idx) :
+            prev_ts = filtered_requests[prev_idx].get('r_timestamp')
+            prev_lat = filtered_requests[prev_idx].get('latitude')
+            prev_lon = filtered_requests[prev_idx].get('longitude')
+            timeElapsed = (poi_visit.start_time - prev_ts) / 1000.0 # in seconds
+            
+            prev_dist = distance_meter(prev_lat, prev_lon, 
+                                       filtered_requests[poi_visit.start_idx].get('latitude'),filtered_requests[poi_visit.start_idx].get('longitude'))
+            if (timeElapsed < 10.0) :
+                prev_exists = True
+                
+                if (timeElapsed < 1.0) :
+                    if (prev_dist > 10.0) :
+                        prev_valid = False
+                else :
+                    speed = prev_dist / timeElapsed
+                    if (speed > 10.0) :
+                        prev_valid = False
+                        
+            elif (timeElapsed < 60.0) :
+                prev_exists = True
+                speed = prev_dist / timeElapsed
+                if (speed > 30.0) :
+                    prev_valid = False
+            # estimated time of visiting POI between previous lat/long and the first lat/long in the POI (assume moving speed as 2m/s)        
+            estTimeToAdd = estTimeToAdd + max(0, timeElapsed - prev_dist/2.0)
+                    
+        # check the speed of movement out from poi
+        post_idx = min(len(filtered_requests)-1, poi_visit.end_idx+1)
+        post_exists = False
+        post_valid = None
+        if (post_idx > poi_visit.end_idx) :
+            post_ts = filtered_requests[post_idx].get('r_timestamp')
+            post_lat = filtered_requests[post_idx].get('latitude')
+            post_lon = filtered_requests[post_idx].get('longitude')
+            timeElapsed = (post_ts - poi_visit.end_time) / 1000.0 # in seconds
+            
+            post_dist = distance_meter(post_lat, post_lon, 
+                                       filtered_requests[poi_visit.end_idx].get('latitude'), filtered_requests[poi_visit.end_idx].get('longitude'))
+            if (timeElapsed < 10.0) :
+                post_exists = True
+                
+                if (timeElapsed < 1.0) :
+                    if (post_dist > 10.0) :
+                        post_valid = False
+                else :
+                    speed = post_dist / timeElapsed
+                    if (speed > 10.0) :
+                        post_valid = False
+                        
+            elif (timeElapsed < 60.0) :
+                post_exists = True
+                speed = post_dist / timeElapsed
+                if (speed > 30.0) :
+                    post_valid = False
+                    
+            estTimeToAdd = estTimeToAdd + max(0, timeElapsed - post_dist/2.0)        
+        # check the duration of visit
+        duration = poi_visit.getVisitDuration()
+        est_duration = duration + estTimeToAdd
+        
+        if ((prev_valid == False) or (post_valid == False)) :
+            poi_visit.isValid = False
+        elif ((prev_exists == True) and (post_exists == True)) :
+            
+            if (est_duration < 60.0) :
+                
+                poi_visit.isValid = False
+            else :
+                poi_visit.isValid = True
+        return poi_visits
+                
+                
+def pickFinalValidVisits(poi_visits) :
+    """ compare poi visits if they are overlapping - pick one which looks more reasonable """
+    poi_visits = sorted(poi_visits, key=operator.attrgetter('start_idx'))
+    
+    i = 0
+    bi = 0
+    overlap_buckets = list(list()) # lisf of list - each element will be a list of poi-visit that share some overlapping time range
+    t1 = None
+    t2 = None
+    
+    while (True) :
+        
+        if (i == len(poi_visits)) :
+            break
+        
+        poi_visit = poi_visits[i]
+        if (poi_visit.isValid) :
+            if (len(overlap_buckets) == 0) :
+                overlap_buckets.append([poi_visit])
+                t1 = poi_visit.start_idx
+                t2 = poi_visit.end_idx
+                
+            else :
+                if (existsOverlap(t1, t2, poi_visit.start_idx, poi_visit.end_idx)) :
+                    overlap_buckets[bi].append(poi_visit)
+                    t2 = max(t2, poi_visit.end_idx)
+                else :
+                    t1 = poi_visit.start_idx
+                    t2 = poi_visit.end_idx
+                    bi+=1
+                    overlap_buckets.append([poi_visit])
+        i+=1
+        
+    # find one poi visit among overlapping poi visits
+    if (len(overlap_buckets) > 0) :
+        for overlaps in overlap_buckets :
+            picked_idx = None
+            durations = [(item.end_time - item.start_time) / 1000.0 for item in overlaps]
+            max_durations_idx = np.argwhere(durations == np.amax(durations))
+
+            if (len(max_durations_idx) == 1) :
+                picked_idx = int(max_durations_idx)
+            else :
+                numUniq_pts = [poi_visit.getNumUniqLocs() for poi_visit in overlaps]
+                max_numUniq_idx = np.argwhere(numUniq_pts == np.amax(numUniq_pts))
+
+                if (len(max_numUniq_idx) == 1) :
+                    picked_idx = int(max_durations_idx[int(max_numUniq_idx)])
+
+            if (picked_idx != None) :
+                # set all the other overlapped visit as invalid
+                for i in range(len(overlaps)) :
+                    if (i != picked_idx) :
+                        overlaps[i].isValid = False
+            else :
+                for i in range(len(overlaps)) :
+                    overlaps[i].isValid = None # couldn't pick one based on the given information. currently set to None.                 
+            
+    return poi_visits
+    
+def existsOverlap(s1, e1, s2, e2) :
+    if (s1 is None) or (e1 is None) :
+        return False
+    return max(s1, s2) <= min(e1,e2)    
+
+def distance_meter(lat1, lon1, lat2, lon2) :
+    #return distance as meter if you want km distance, remove "* 1000"
+    radius = 6371 * 1000 
+
+    dLat = (lat2-lat1) * math.pi / 180
+    dLng = (lon2-lon1) * math.pi / 180
+
+    lat1 = lat1 * math.pi / 180
+    lat2 = lat2 * math.pi / 180
+
+    val = sin(dLat/2) * sin(dLat/2) + sin(dLng/2) * sin(dLng/2) * cos(lat1) * cos(lat2)    
+    ang = 2 * atan2(sqrt(val), sqrt(1-val))
+    return radius * ang
 
 
 def parse_arguments():
