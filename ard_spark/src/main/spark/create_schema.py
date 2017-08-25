@@ -1,8 +1,14 @@
 from pyspark import SparkConf, SparkContext 
 from pyspark.sql import HiveContext
 
-"""command to run this script"""
-"""SPARK_MAJOR_VERSION=2 spark-submit --master yarn --queue ard --driver-memory 2g --executor-memory 4g --num-executors 4 --packages com.databricks:spark-avro_2.11:3.2.0 create_schema.py"""
+"""command to run this script
+SPARK_MAJOR_VERSION=2 spark-submit --master yarn --queue ard --driver-memory 2g --executor-memory 4g --num-executors 4 --packages com.databricks:spark-avro_2.11:3.2.0 create_schema.py
+
+Note that this command shall not be used if there have been change
+on struct fields.   In that case, use the avro tool to get schema in
+JSON format, remove the extra fields, and then convert the schema back
+to an empty avro file.
+"""
 
 def main():
     conf = SparkConf().setAppName('Create Empty Avro File with Schema')
@@ -18,7 +24,6 @@ def main():
     df_schema.write.mode('overwrite').format("com.databricks.spark.avro").save(output_path)
 
     sc.stop()
-
 
 if __name__ == '__main__':
 	main()

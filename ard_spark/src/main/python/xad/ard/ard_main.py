@@ -400,8 +400,8 @@ class ArdMain(BaseArd):
                         time = "{}/{}".format(date, hour)
                         s3p_status = self.status_log.getStatus(s3p_hourly_key, time)
                         if (not self.FORCE and s3p_status is not None and s3p_status==1):
-                            logging.info("x SKIP: found {} {} {}".format(s3p_hourly_key, date, hour))
                             num_hours += 1
+                            logging.info("x SKIP: found {} {} {} ({})".format(s3p_hourly_key, date, hour, num_hours))
                             continue
                         
                         orc_status = self.status_log.getStatus(orc_hourly_key, time)
@@ -415,7 +415,8 @@ class ArdMain(BaseArd):
                             num_hours += 1
           
                 # Update daily status                    
-                if (num_hours == 24 and not self.NOSTATUS):
+                logging.info("Check: num_hours = {}, NOSTATUS = {}".format(num_hours, self.NOSTATUS))
+                if (num_hours >= 24 and not self.NOSTATUS):
                     self.status_log.addStatus(s3p_daily_key, date)
 
 
