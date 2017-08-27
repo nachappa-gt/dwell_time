@@ -1,3 +1,9 @@
+Release 1.2.0
+--------------
+- Added fields - location_extensions, isp_match, beacons
+- Updated Hive schema to the latest as well.
+- Date: 2017-08-25
+
 Release 1.1.1
 --------------
 - s3hive: use s3 as hive partitions
