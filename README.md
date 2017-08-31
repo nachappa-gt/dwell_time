@@ -10,5 +10,3 @@ Folders:
 
 * ard_spark - Current version based on Spark.
 
-* ard_hive - Old impementation using Hive for joining.
-

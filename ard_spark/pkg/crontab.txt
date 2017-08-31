@@ -13,62 +13,100 @@ MAILTO=science-ops@xad.com
 #-------
 # Gen
 #-------
+## Note: 
+# - centroid info available for us, gb, au, in, de, ca, jp, it, es, fr, cn
+#   yet only used for us and gb.
 ## With ARD 
-00 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-ex --date L12 --country us --logtype exchange --queue ard >> /home/xad/ard/log/gen-us-exchange.log 2>&1
-40 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-disp --date L12 --country us --logtype display,euwest1 --queue ard >> /home/xad/ard/log/gen-us-disp.log 2>&1
+00 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-ex --date L15 --country us --logtype exchange --queue ard >> /home/xad/ard/log/gen-us-exchange.log 2>&1
+40 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-disp --date L15 --country us --logtype display,euwest1 --queue ard >> /home/xad/ard/log/gen-us-disp.log 2>&1
+55 * * * * xad /home/xad/bin/ard gen -d --lock gen-gb --date L15 --country gb --queue ard >> /home/xad/ard/log/gen-gb.log 2>&1
 30 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-dr --date L20 --country us --logtype display_dr --queue ard >> /home/xad/ard/log/gen-us-dr.log 2>&1
 35 * * * * xad /home/xad/bin/ard gen -d --lock gen-gb-dr --date L20 --country gb --logtype display_dr --queue ard >> /home/xad/ard/log/gen-gb-dr.log 2>&1
-55 * * * * xad /home/xad/bin/ard gen -d --lock gen-gb --date L12 --country gb --queue ard >> /home/xad/ard/log/gen-gb.log 2>&1
-#  Without ARD
-03 * * * * xad /home/xad/bin/ard gen -d --lock gen-ca --date L12 --country ca --queue ard >> /home/xad/ard/log/gen-ca.log 2>&1 
-06 * * * * xad /home/xad/bin/ard gen -d --lock gen-cn --date L12 --country cn --queue ard >> /home/xad/ard/log/gen-cn.log 2>&1 
-09 * * * * xad /home/xad/bin/ard gen -d --lock gen-jp --date L12 --country jp --queue ard >> /home/xad/ard/log/gen-jp.log 2>&1 
-12 * * * * xad /home/xad/bin/ard gen -d --lock gen-in --date L12 --country in --queue ard >> /home/xad/ard/log/gen-in.log 2>&1
+##  Without ARD
+03 * * * * xad /home/xad/bin/ard gen -d --lock gen-ca --date L15 --country ca --queue ard --nosl >> /home/xad/ard/log/gen-ca.log 2>&1 
+06 * * * * xad /home/xad/bin/ard gen -d --lock gen-cn --date L15 --country cn --queue ard --nosl >> /home/xad/ard/log/gen-cn.log 2>&1 
+09 * * * * xad /home/xad/bin/ard gen -d --lock gen-jp --date L15 --country jp --queue ard --nosl >> /home/xad/ard/log/gen-jp.log 2>&1 
+12 * * * * xad /home/xad/bin/ard gen -d --lock gen-in --date L15 --country in --queue ard --nosl >> /home/xad/ard/log/gen-in.log 2>&1
 ## 
-18 * * * * xad /home/xad/bin/ard gen -d --lock gen-fr --date L12 --country fr --queue ard >> /home/xad/ard/log/gen-fr.log 2>&1
-21 * * * * xad /home/xad/bin/ard gen -d --lock gen-de --date L12 --country de --queue ard >> /home/xad/ard/log/gen-de.log 2>&1
-24 * * * * xad /home/xad/bin/ard gen -d --lock gen-it --date L12 --country it --queue ard >> /home/xad/ard/log/gen-it.log 2>&1
-27 * * * * xad /home/xad/bin/ard gen -d --lock gen-es --date L12 --country es --queue ard >> /home/xad/ard/log/gen-es.log 2>&1
+18 * * * * xad /home/xad/bin/ard gen -d --lock gen-fr --date L15 --country fr --queue ard --nosl >> /home/xad/ard/log/gen-fr.log 2>&1
+21 * * * * xad /home/xad/bin/ard gen -d --lock gen-de --date L15 --country de --queue ard --nosl >> /home/xad/ard/log/gen-de.log 2>&1
+24 * * * * xad /home/xad/bin/ard gen -d --lock gen-it --date L15 --country it --queue ard --nosl >> /home/xad/ard/log/gen-it.log 2>&1
+27 * * * * xad /home/xad/bin/ard gen -d --lock gen-es --date L15 --country es --queue ard --nosl >> /home/xad/ard/log/gen-es.log 2>&1
 ## 
-33 * * * * xad /home/xad/bin/ard gen -d --lock gen-lu-fi --date L12 --country lu,fi --queue ard >> /home/xad/ard/log/gen-lu-fi.log 2>&1
-36 * * * * xad /home/xad/bin/ard gen -d --lock gen-be-se --date L12 --country be,se --queue ard >> /home/xad/ard/log/gen-be-se.log 2>&1
-39 * * * * xad /home/xad/bin/ard gen -d --lock gen-no-nl --date L12 --country no,nl --queue ard >> /home/xad/ard/log/gen-no-nl.log 2>&1
-42 * * * * xad /home/xad/bin/ard gen -d --lock gen-dk-ch --date L12 --country dk,ch --queue ard >> /home/xad/ard/log/gen-dk-ch.log 2>&1
-48 * * * * xad /home/xad/bin/ard gen -d --lock gen-at --date L12 --country at --queue ard >> /home/xad/ard/log/gen-at.log 2>&1
+33 * * * * xad /home/xad/bin/ard gen -d --lock gen-lu-fi --date L15 --country lu,fi --queue ard --nosl >> /home/xad/ard/log/gen-lu-fi.log 2>&1
+36 * * * * xad /home/xad/bin/ard gen -d --lock gen-be-se --date L15 --country be,se --queue ard --nosl >> /home/xad/ard/log/gen-be-se.log 2>&1
+39 * * * * xad /home/xad/bin/ard gen -d --lock gen-no-nl --date L15 --country no,nl --queue ard --nosl >> /home/xad/ard/log/gen-no-nl.log 2>&1
+42 * * * * xad /home/xad/bin/ard gen -d --lock gen-dk --date L15 --country dk --queue ard --nosl >> /home/xad/ard/log/gen-dk.log 2>&1
+44 * * * * xad /home/xad/bin/ard gen -d --lock gen-ch --date L15 --country ch --queue ard --nosl >> /home/xad/ard/log/gen-ch.log 2>&1
+48 * * * * xad /home/xad/bin/ard gen -d --lock gen-at --date L15 --country at --queue ard --nosl >> /home/xad/ard/log/gen-at.log 2>&1
 ## 
-51 * * * * xad /home/xad/bin/ard gen -d --lock gen-pa --date L12 --country au,nz --queue ard >> /home/xad/ard/log/gen-pa.log 2>&1
+51 * * * * xad /home/xad/bin/ard gen -d --lock gen-au --date L15 --country au --queue ard --nosl >> /home/xad/ard/log/gen-au.log 2>&1
+53 * * * * xad /home/xad/bin/ard gen -d --lock gen-nz --date L15 --country nz --queue ard --nosl >> /home/xad/ard/log/gen-nz.log 2>&1
  
+#------------------
+# S3 Put (Backup)
+#------------------
+# With ARD 
+00 * * * * xad /home/xad/bin/ard s3p -d --lock s3p-us-ex --date L30 --country us --logtype exchange --queue ard -m 18 >> /home/xad/ard/log/s3p-us-exchange.log 2>&1
+40 */2 * * * xad /home/xad/bin/ard s3p -d --lock s3p-us-disp --date L30 --country us --logtype display,euwest1 --queue ard -m 10 >> /home/xad/ard/log/s3p-us-disp.log 2>&1
+55 */2 * * * xad /home/xad/bin/ard s3p -d --lock s3p-gb --date L30 --country gb --queue ard -m 8 >> /home/xad/ard/log/s3p-gb.log 2>&1
+30 */2 * * * xad /home/xad/bin/ard s3p -d --lock s3p-us-dr --date L30 --country us --logtype display_dr --queue ard -m 8 >> /home/xad/ard/log/s3p-us-dr.log 2>&1
+35 */2 * * * xad /home/xad/bin/ard s3p -d --lock s3p-gb-dr --date L30 --country gb --logtype display_dr --queue ard >> /home/xad/ard/log/s3p-gb-dr.log 2>&1
+# Without ARD (Major Countries)
+03 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-ca --date L30 --country ca --queue ard -m 6 >> /home/xad/ard/log/s3p-ca.log 2>&1 
+06 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-cn --date L30 --country cn --queue ard -m 6 >> /home/xad/ard/log/s3p-cn.log 2>&1 
+09 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-jp --date L30 --country jp --queue ard -m 6 >> /home/xad/ard/log/s3p-jp.log 2>&1 
+12 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-in --date L30 --country in --queue ard -m 6 >> /home/xad/ard/log/s3p-in.log 2>&1
+18 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-fr --date L30 --country fr --queue ard -m 6 >> /home/xad/ard/log/s3p-fr.log 2>&1
+21 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-de --date L30 --country de --queue ard -m 6 >> /home/xad/ard/log/s3p-de.log 2>&1
+24 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-it --date L30 --country it --queue ard -m 6 >> /home/xad/ard/log/s3p-it.log 2>&1
+27 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-es --date L30 --country es --queue ard -m 6 >> /home/xad/ard/log/s3p-es.log 2>&1
+# Without ARD (Minor Countries)
+33 */4 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-lu-fi --date L30 --country lu,fi --queue ard >> /home/xad/ard/log/s3p-lu-fi.log 2>&1
+36 */4 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-be-se --date L30 --country be,se --queue ard >> /home/xad/ard/log/s3p-be-se.log 2>&1
+39 */4 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-no-nl --date L30 --country no,nl --queue ard >> /home/xad/ard/log/s3p-no-nl.log 2>&1
+42 */4 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-dk --date L30 --country dk --queue ard >> /home/xad/ard/log/s3p-dk.log 2>&1
+44 */4 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-ch --date L30 --country ch --queue ard >> /home/xad/ard/log/s3p-ch.log 2>&1
+48 */4 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-at --date L30 --country at --queue ard >> /home/xad/ard/log/s3p-at.log 2>&1
+## 
+51 */4 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-au --date L30 --country au --queue ard  >> /home/xad/ard/log/s3p-au.log 2>&1
+53 */4 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-nz --date L30 --country nz --queue ard  >> /home/xad/ard/log/s3p-nz.log 2>&1
 
 
-#----------------
-# Add Partition
-#----------------
-ADDPAR_DATE=2017-04-15:2017-05-17
-ADDPAR_DATE_DR=2017-04-15:2017-05-09
+#-----------
+# S3 Hive
+#-----------
+S3H_DATE=2017-05-01:2017-05-31
 
-#00 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-at --date $ADDPAR_DATE --country at --queue ard >> /home/xad/ard/log/add-par-at.log 2>&1
-#03 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-au --date $ADDPAR_DATE --country au --queue ard >> /home/xad/ard/log/add-par-au.log 2>&1
-#06 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-be --date $ADDPAR_DATE --country be --queue ard >> /home/xad/ard/log/add-par-be.log 2>&1
-#09 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-ca --date $ADDPAR_DATE --country ca --queue ard >> /home/xad/ard/log/add-par-ca.log 2>&1
-#12 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-ch --date $ADDPAR_DATE --country ch --queue ard >> /home/xad/ard/log/add-par-ch.log 2>&1
-#15 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-cn --date $ADDPAR_DATE --country cn --queue ard >> /home/xad/ard/log/add-par-cn.log 2>&1
-#18 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-de --date $ADDPAR_DATE --country de --queue ard >> /home/xad/ard/log/add-par-de.log 2>&1
-#21 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-dk --date $ADDPAR_DATE --country dk --queue ard >> /home/xad/ard/log/add-par-dk.log 2>&1
-#24 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-es --date $ADDPAR_DATE --country es --queue ard >> /home/xad/ard/log/add-par-es.log 2>&1
-#27 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-fi --date $ADDPAR_DATE --country fi --queue ard >> /home/xad/ard/log/add-par-fi.log 2>&1
-#30 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-fr --date $ADDPAR_DATE --country fr --queue ard >> /home/xad/ard/log/add-par-fr.log 2>&1
-#33 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-gb --date $ADDPAR_DATE --country gb --queue ard >> /home/xad/ard/log/add-par-gb.log 2>&1
-#36 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-it --date $ADDPAR_DATE --country it --queue ard >> /home/xad/ard/log/add-par-it.log 2>&1
-#39 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-jp --date $ADDPAR_DATE --country jp --queue ard >> /home/xad/ard/log/add-par-jp.log 2>&1
-#42 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-lu --date $ADDPAR_DATE --country lu --queue ard >> /home/xad/ard/log/add-par-lu.log 2>&1
-#45 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-nl --date $ADDPAR_DATE --country nl --queue ard >> /home/xad/ard/log/add-par-nl.log 2>&1
-#48 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-no --date $ADDPAR_DATE --country no --queue ard >> /home/xad/ard/log/add-par-no.log 2>&1
-#51 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-nz --date $ADDPAR_DATE --country nz --queue ard >> /home/xad/ard/log/add-par-nz.log 2>&1
-#54 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-se --date $ADDPAR_DATE --country se --queue ard >> /home/xad/ard/log/add-par-se.log 2>&1
-#57 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-us --date $ADDPAR_DATE --country us --queue ard >> /home/xad/ard/log/add-par-us.log 2>&1
+# With ARD 
+00 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-ex --date $S3H_DATE --country us --logtype exchange --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-exchange.log 2>&1
+40 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-disp --date $S3H_DATE --country us --logtype display,euwest1 --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-disp.log 2>&1
+55 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-gb --date $S3H_DATE --country gb --queue ard --quick -ne >> /home/xad/ard/log/s3h-gb.log 2>&1
+30 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-dr --date $S3H_DATE --country us --logtype display_dr --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-dr.log 2>&1
+35 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-gb-dr --date $S3H_DATE --country gb --logtype display_dr --queue ard --quick -ne >> /home/xad/ard/log/s3h-gb-dr.log 2>&1
+# Without ARD (Major Countries)
+03 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-ca --date $S3H_DATE --country ca --queue ard --quick -ne >> /home/xad/ard/log/s3h-ca.log 2>&1 
+06 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-cn --date $S3H_DATE --country cn --queue ard --quick -ne >> /home/xad/ard/log/s3h-cn.log 2>&1 
+09 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-jp --date $S3H_DATE --country jp --queue ard --quick -ne >> /home/xad/ard/log/s3h-jp.log 2>&1 
+12 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-in --date $S3H_DATE --country in --queue ard --quick -ne >> /home/xad/ard/log/s3h-in.log 2>&1
+18 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-fr --date $S3H_DATE --country fr --queue ard --quick -ne >> /home/xad/ard/log/s3h-fr.log 2>&1
+21 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-de --date $S3H_DATE --country de --queue ard --quick -ne >> /home/xad/ard/log/s3h-de.log 2>&1
+24 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-it --date $S3H_DATE --country it --queue ard --quick -ne >> /home/xad/ard/log/s3h-it.log 2>&1
+27 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-es --date $S3H_DATE --country es --queue ard --quick -ne >> /home/xad/ard/log/s3h-es.log 2>&1
+# Without ARD (Minor Countries)
+33 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-lu-fi --date $S3H_DATE --country lu,fi --queue ard --quick -ne >> /home/xad/ard/log/s3h-lu-fi.log 2>&1
+36 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-be-se --date $S3H_DATE --country be,se --queue ard --quick -ne >> /home/xad/ard/log/s3h-be-se.log 2>&1
+39 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-no-nl --date $S3H_DATE --country no,nl --queue ard --quick -ne >> /home/xad/ard/log/s3h-no-nl.log 2>&1
+42 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-dk --date $S3H_DATE --country dk --queue ard --quick -ne >> /home/xad/ard/log/s3h-dk.log 2>&1
+44 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-ch --date $S3H_DATE --country ch --queue ard --quick -ne >> /home/xad/ard/log/s3h-ch.log 2>&1
+48 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-at --date $S3H_DATE --country at --queue ard --quick -ne >> /home/xad/ard/log/s3h-at.log 2>&1
+## 
+51 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-au --date $S3H_DATE --country au --queue ard --quick -ne >> /home/xad/ard/log/s3h-au.log 2>&1
+53 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-nz --date $S3H_DATE --country nz --queue ard --quick -ne >> /home/xad/ard/log/s3h-nz.log 2>&1
 
-#07 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-us-data --date $ADDPAR_DATE_DR --country us --logtype display_dr --queue ard >> /home/xad/ard/log/add-par-us-data.log 2>&1
-#08 */4 * * * xad /home/xad/bin/ard addpar -d --lock add-par-gb-data --date $ADDPAR_DATE_DR --country gb --logtype display_dr --queue ard >> /home/xad/ard/log/add-par-gb-data.log 2>&1
-
+#-----------
+# Cleaning
+#-----------
+# FIXME
 
 
