@@ -15,13 +15,14 @@ MAILTO=science-ops@xad.com
 #-------
 ## Note: 
 # - centroid info available for us, gb, au, in, de, ca, jp, it, es, fr, cn
-#   yet only used for us and gb.
+#   yet only used for us, gb and de.
 ## With ARD 
 00 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-ex --date L15 --country us --logtype exchange --queue ard >> /home/xad/ard/log/gen-us-exchange.log 2>&1
 40 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-disp --date L15 --country us --logtype display,euwest1 --queue ard >> /home/xad/ard/log/gen-us-disp.log 2>&1
 55 * * * * xad /home/xad/bin/ard gen -d --lock gen-gb --date L15 --country gb --queue ard >> /home/xad/ard/log/gen-gb.log 2>&1
-30 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-dr --date L20 --country us --logtype display_dr --queue ard >> /home/xad/ard/log/gen-us-dr.log 2>&1
-35 * * * * xad /home/xad/bin/ard gen -d --lock gen-gb-dr --date L20 --country gb --logtype display_dr --queue ard >> /home/xad/ard/log/gen-gb-dr.log 2>&1
+30 * * * * xad /home/xad/bin/ard gen -d --lock gen-us-dr --date L30 --country us --logtype display_dr --queue ard >> /home/xad/ard/log/gen-us-dr.log 2>&1
+35 * * * * xad /home/xad/bin/ard gen -d --lock gen-gb-dr --date L30 --country gb --logtype display_dr --queue ard >> /home/xad/ard/log/gen-gb-dr.log 2>&1
+21 * * * * xad /home/xad/bin/ard gen -d --lock gen-de --date L15 --country de --queue ard >> /home/xad/ard/log/gen-de.log 2>&1
 ##  Without ARD
 03 * * * * xad /home/xad/bin/ard gen -d --lock gen-ca --date L15 --country ca --queue ard --nosl >> /home/xad/ard/log/gen-ca.log 2>&1 
 06 * * * * xad /home/xad/bin/ard gen -d --lock gen-cn --date L15 --country cn --queue ard --nosl >> /home/xad/ard/log/gen-cn.log 2>&1 
@@ -29,7 +30,6 @@ MAILTO=science-ops@xad.com
 12 * * * * xad /home/xad/bin/ard gen -d --lock gen-in --date L15 --country in --queue ard --nosl >> /home/xad/ard/log/gen-in.log 2>&1
 ## 
 18 * * * * xad /home/xad/bin/ard gen -d --lock gen-fr --date L15 --country fr --queue ard --nosl >> /home/xad/ard/log/gen-fr.log 2>&1
-21 * * * * xad /home/xad/bin/ard gen -d --lock gen-de --date L15 --country de --queue ard --nosl >> /home/xad/ard/log/gen-de.log 2>&1
 24 * * * * xad /home/xad/bin/ard gen -d --lock gen-it --date L15 --country it --queue ard --nosl >> /home/xad/ard/log/gen-it.log 2>&1
 27 * * * * xad /home/xad/bin/ard gen -d --lock gen-es --date L15 --country es --queue ard --nosl >> /home/xad/ard/log/gen-es.log 2>&1
 ## 
@@ -52,13 +52,13 @@ MAILTO=science-ops@xad.com
 55 */2 * * * xad /home/xad/bin/ard s3p -d --lock s3p-gb --date L30 --country gb --queue ard -m 8 >> /home/xad/ard/log/s3p-gb.log 2>&1
 30 */2 * * * xad /home/xad/bin/ard s3p -d --lock s3p-us-dr --date L30 --country us --logtype display_dr --queue ard -m 8 >> /home/xad/ard/log/s3p-us-dr.log 2>&1
 35 */2 * * * xad /home/xad/bin/ard s3p -d --lock s3p-gb-dr --date L30 --country gb --logtype display_dr --queue ard >> /home/xad/ard/log/s3p-gb-dr.log 2>&1
+21 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-de --date L30 --country de --queue ard -m 6 >> /home/xad/ard/log/s3p-de.log 2>&1
 # Without ARD (Major Countries)
 03 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-ca --date L30 --country ca --queue ard -m 6 >> /home/xad/ard/log/s3p-ca.log 2>&1 
 06 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-cn --date L30 --country cn --queue ard -m 6 >> /home/xad/ard/log/s3p-cn.log 2>&1 
 09 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-jp --date L30 --country jp --queue ard -m 6 >> /home/xad/ard/log/s3p-jp.log 2>&1 
 12 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-in --date L30 --country in --queue ard -m 6 >> /home/xad/ard/log/s3p-in.log 2>&1
 18 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-fr --date L30 --country fr --queue ard -m 6 >> /home/xad/ard/log/s3p-fr.log 2>&1
-21 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-de --date L30 --country de --queue ard -m 6 >> /home/xad/ard/log/s3p-de.log 2>&1
 24 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-it --date L30 --country it --queue ard -m 6 >> /home/xad/ard/log/s3p-it.log 2>&1
 27 */3 * * * xad /home/xad/bin/ard s3pd -d --lock s3p-es --date L30 --country es --queue ard -m 6 >> /home/xad/ard/log/s3p-es.log 2>&1
 # Without ARD (Minor Countries)
@@ -76,33 +76,39 @@ MAILTO=science-ops@xad.com
 #-----------
 # S3 Hive
 #-----------
+
+# Run s3h before deleting data from HDFS.
+# This task will point Hive partitions to S3.
+# Need to update S3H_DATA.  Check status_log (key = science_core_s3hive) for progress.
+# After completion, manually delete the whole month from HDFS.
+
 S3H_DATE=2017-05-01:2017-05-31
 
-# With ARD 
-00 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-ex --date $S3H_DATE --country us --logtype exchange --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-exchange.log 2>&1
-40 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-disp --date $S3H_DATE --country us --logtype display,euwest1 --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-disp.log 2>&1
-55 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-gb --date $S3H_DATE --country gb --queue ard --quick -ne >> /home/xad/ard/log/s3h-gb.log 2>&1
-30 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-dr --date $S3H_DATE --country us --logtype display_dr --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-dr.log 2>&1
-35 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-gb-dr --date $S3H_DATE --country gb --logtype display_dr --queue ard --quick -ne >> /home/xad/ard/log/s3h-gb-dr.log 2>&1
-# Without ARD (Major Countries)
-03 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-ca --date $S3H_DATE --country ca --queue ard --quick -ne >> /home/xad/ard/log/s3h-ca.log 2>&1 
-06 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-cn --date $S3H_DATE --country cn --queue ard --quick -ne >> /home/xad/ard/log/s3h-cn.log 2>&1 
-09 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-jp --date $S3H_DATE --country jp --queue ard --quick -ne >> /home/xad/ard/log/s3h-jp.log 2>&1 
-12 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-in --date $S3H_DATE --country in --queue ard --quick -ne >> /home/xad/ard/log/s3h-in.log 2>&1
-18 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-fr --date $S3H_DATE --country fr --queue ard --quick -ne >> /home/xad/ard/log/s3h-fr.log 2>&1
-21 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-de --date $S3H_DATE --country de --queue ard --quick -ne >> /home/xad/ard/log/s3h-de.log 2>&1
-24 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-it --date $S3H_DATE --country it --queue ard --quick -ne >> /home/xad/ard/log/s3h-it.log 2>&1
-27 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-es --date $S3H_DATE --country es --queue ard --quick -ne >> /home/xad/ard/log/s3h-es.log 2>&1
-# Without ARD (Minor Countries)
-33 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-lu-fi --date $S3H_DATE --country lu,fi --queue ard --quick -ne >> /home/xad/ard/log/s3h-lu-fi.log 2>&1
-36 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-be-se --date $S3H_DATE --country be,se --queue ard --quick -ne >> /home/xad/ard/log/s3h-be-se.log 2>&1
-39 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-no-nl --date $S3H_DATE --country no,nl --queue ard --quick -ne >> /home/xad/ard/log/s3h-no-nl.log 2>&1
-42 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-dk --date $S3H_DATE --country dk --queue ard --quick -ne >> /home/xad/ard/log/s3h-dk.log 2>&1
-44 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-ch --date $S3H_DATE --country ch --queue ard --quick -ne >> /home/xad/ard/log/s3h-ch.log 2>&1
-48 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-at --date $S3H_DATE --country at --queue ard --quick -ne >> /home/xad/ard/log/s3h-at.log 2>&1
-## 
-51 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-au --date $S3H_DATE --country au --queue ard --quick -ne >> /home/xad/ard/log/s3h-au.log 2>&1
-53 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-nz --date $S3H_DATE --country nz --queue ard --quick -ne >> /home/xad/ard/log/s3h-nz.log 2>&1
+## With ARD 
+#00 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-ex --date $S3H_DATE --country us --logtype exchange --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-exchange.log 2>&1
+#40 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-disp --date $S3H_DATE --country us --logtype display,euwest1 --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-disp.log 2>&1
+#55 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-gb --date $S3H_DATE --country gb --queue ard --quick -ne >> /home/xad/ard/log/s3h-gb.log 2>&1
+#30 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-us-dr --date $S3H_DATE --country us --logtype display_dr --queue ard --quick -ne >> /home/xad/ard/log/s3h-us-dr.log 2>&1
+#35 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-gb-dr --date $S3H_DATE --country gb --logtype display_dr --queue ard --quick -ne >> /home/xad/ard/log/s3h-gb-dr.log 2>&1
+#21 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-de --date $S3H_DATE --country de --queue ard --quick -ne >> /home/xad/ard/log/s3h-de.log 2>&1
+## Without ARD (Major Countries)
+#03 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-ca --date $S3H_DATE --country ca --queue ard --quick -ne >> /home/xad/ard/log/s3h-ca.log 2>&1 
+#06 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-cn --date $S3H_DATE --country cn --queue ard --quick -ne >> /home/xad/ard/log/s3h-cn.log 2>&1 
+#09 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-jp --date $S3H_DATE --country jp --queue ard --quick -ne >> /home/xad/ard/log/s3h-jp.log 2>&1 
+#12 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-in --date $S3H_DATE --country in --queue ard --quick -ne >> /home/xad/ard/log/s3h-in.log 2>&1
+#18 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-fr --date $S3H_DATE --country fr --queue ard --quick -ne >> /home/xad/ard/log/s3h-fr.log 2>&1
+#24 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-it --date $S3H_DATE --country it --queue ard --quick -ne >> /home/xad/ard/log/s3h-it.log 2>&1
+#27 */8 * * * xad /home/xad/bin/ard s3h -d --lock s3h-es --date $S3H_DATE --country es --queue ard --quick -ne >> /home/xad/ard/log/s3h-es.log 2>&1
+## Without ARD (Minor Countries)
+#33 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-lu-fi --date $S3H_DATE --country lu,fi --queue ard --quick -ne >> /home/xad/ard/log/s3h-lu-fi.log 2>&1
+#36 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-be-se --date $S3H_DATE --country be,se --queue ard --quick -ne >> /home/xad/ard/log/s3h-be-se.log 2>&1
+#39 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-no-nl --date $S3H_DATE --country no,nl --queue ard --quick -ne >> /home/xad/ard/log/s3h-no-nl.log 2>&1
+#42 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-dk --date $S3H_DATE --country dk --queue ard --quick -ne >> /home/xad/ard/log/s3h-dk.log 2>&1
+#44 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-ch --date $S3H_DATE --country ch --queue ard --quick -ne >> /home/xad/ard/log/s3h-ch.log 2>&1
+#48 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-at --date $S3H_DATE --country at --queue ard --quick -ne >> /home/xad/ard/log/s3h-at.log 2>&1
+### 
+#51 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-au --date $S3H_DATE --country au --queue ard --quick -ne >> /home/xad/ard/log/s3h-au.log 2>&1
+#53 */12 * * * xad /home/xad/bin/ard s3h -d --lock s3h-nz --date $S3H_DATE --country nz --queue ard --quick -ne >> /home/xad/ard/log/s3h-nz.log 2>&1
 
 #-----------
 # Cleaning

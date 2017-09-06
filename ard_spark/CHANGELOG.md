@@ -1,3 +1,8 @@
+Release 1.2.1
+--------------
+- Added de to modeling list.  (Need to update cronjob as well removing --nosl)
+- Date: 2017-09-06
+
 Release 1.2.0
 --------------
 - Added fields - location_extensions, isp_match, beacons
