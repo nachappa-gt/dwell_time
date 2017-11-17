@@ -18,7 +18,7 @@ def main():
     
     # Load most recent data to get the latest schema, directory may change 
     # input_path = '/data/extract/us/exchange/2017/04/10/03/fill/tll'
-    input_path = '/data/extract/us/exchange/2017/08/16/03/fill/tll'
+    input_path = '/data/extract/us/display/2017/11/15/12/fill/tll'
     
     df = hiveContext.read.format("com.databricks.spark.avro").load(input_path)
     df_schema = df.limit(0)

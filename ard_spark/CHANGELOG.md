@@ -1,3 +1,8 @@
+Release 1.2.2
+--------------
+- Added fields location, ha_poi_info
+- Date: 2017-11-17
+
 Release 1.2.1
 --------------
 - Added de to modeling list.  (Need to update cronjob as well removing --nosl)

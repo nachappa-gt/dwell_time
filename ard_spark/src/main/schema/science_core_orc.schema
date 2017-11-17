@@ -112,7 +112,9 @@ CREATE EXTERNAL TABLE `science_core_orc`(
   `matched_poitags` array<struct<proximity_mode:int,poitags:array<struct<poitag:int,namespace:int,can_target:boolean,can_measure:boolean>>,weight:float,hash_key:string,is_poly:int,block_id:int>>,
   `location_extensions` struct<ha:double,va:double,alt:double,floor:int,speed:double,direction:double>,
   `isp_match` struct<proximity_mode:int,fp_sic:string,poi_hash_key:string,brand_id:int>, 
-  `beacons` array<struct<protocol:string,type:int,id1:string,id2:string,id3:string,proximity:string,signal_strength:int,distance:double,description:string,url:string>>
+  `beacons` array<struct<protocol:string,type:int,id1:string,id2:string,id3:string,proximity:string,signal_strength:int,distance:double,description:string,url:string>>,
+  `location` array<struct<address1:string,address2:string,city:string,state:string,zip:string,country:string,latitude:double,longitude:double,dma_code:int>>,
+  `ha_poi_info` array<struct<proximity_mode:int,fp_brand:string,fp_sic:string,weight:float,hash_key:string,is_poly:int,block_id:int,is_employee:boolean,open_status:string,overlap_percent:double,center_distance:double>>
 )
 PARTITIONED BY (
   `cntry` string,
@@ -145,5 +147,9 @@ ALTER TABLE science_core_orc ADD COLUMNS (
   `isp_match` struct<proximity_mode:int,fp_sic:string,poi_hash_key:string,brand_id:int>, 
   `beacons` array<struct<protocol:string,type:int,id1:string,id2:string,id3:string,proximity:string,signal_strength:int,distance:double,description:string,url:string>>);
 
+-- 2017-11-17
+ALTER TABLE science_core_orc ADD COLUMNS (
+  `location` array<struct<address1:string,address2:string,city:string,state:string,zip:string,country:string,latitude:double,longitude:double,dma_code:int>>,
+  `ha_poi_info` array<struct<proximity_mode:int,fp_brand:string,fp_sic:string,weight:float,hash_key:string,is_poly:int,block_id:int,is_employee:boolean,open_status:string,overlap_percent:double,center_distance:double>>);
 
 
