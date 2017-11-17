@@ -95,7 +95,7 @@ def merge(hiveContext,country, logtype, date, hour, fill, loc_score,
         'app_site_domain', 'dnt', 'geo_block_id', 
         # 91-
         'event_count', 'filter_weight','parcel_ids', 'cookie_uid', 'matched_poitags',
-        'location_extensions', 'isp_match', 'beacons'
+        'location_extensions', 'isp_match', 'beacons', 'location', 'ha_poi_info'
         )
 
     df.write.mode("overwrite").format("orc").option("compression","zlib"). \
