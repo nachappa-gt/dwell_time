@@ -1,3 +1,13 @@
+Release 1.2.4
+--------------
+- Added kyro serialization to ard_join command
+- Date: 2017-12-04
+
+Release 1.2.3
+--------------
+- Added hdfshive command
+- Date: 2017-11-20
+
 Release 1.2.2
 --------------
 - Added fields location, ha_poi_info
