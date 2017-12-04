@@ -84,6 +84,11 @@ class Dispatcher(BaseArd):
             elif (cmdKey == ck.get('s3hive')):
                 self.ARD_MAIN.s3Hive()
 
+            # Hive Partition on HDFS
+            elif (cmdKey == ck.get('hdfshive')):
+                self.ARD_MAIN.hdfsHive()
+
+
             # Cleaning
             elif (cmdKey == ck.get('clean')):
                 logging.info("# ARD Cleaning... FIXME")

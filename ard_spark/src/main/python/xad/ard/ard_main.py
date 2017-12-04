@@ -507,6 +507,44 @@ class ArdMain(BaseArd):
                 if (num_hours == 24): 
                     self.status_log.addStatus(s3hive_daily_key, date)
 
+    #------------------------
+    # HDFS Partition on Hive
+    #------------------------
+    def hdfsHive(self, daily=False):
+        """Add Hive partitions"""
+
+        logging.info(" Add Hive Partitions to HDFS")
+        
+        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
+        hours = self.getHours(daily)
+        regions = self.getRegions()
+        logging.info("- dates = {}".format(dates))
+        logging.info("- hours = [{}]".format(",".join(hours)))
+        logging.info("- regions = {}".format(regions))
+        keyPrefix = self.cfg.get('status_log_local.key.science_core_orc')
+
+        for date in dates:
+            for region in regions:
+                # Split region
+                (country,logtype) = self.splitRegion(region)
+                hourly_key = os.path.join(keyPrefix, country, logtype)
+                              
+                # Process hourly
+                for hour in hours:
+                    # Check hourly gen status
+                    logging.info("PROCESSING:" + country + ',' + logtype +',' + date + ',' + hour)
+                    hourly_status = self.status_log.getStatus(hourly_key, date + "/" + hour)
+                    if (hourly_status is not None and
+                            hourly_status == 1):
+            		orc_path = self._get_science_core_orc_path(country, logtype, date, hour)
+            		orc_subparts = self.getSubHourPartitions(orc_path)                    
+
+            		if (len(orc_subparts) == 0):
+                		logging.info("x SKIP: MISSING ORC {}".format(orc_path))
+            		else:
+                		self.addHivePartitions(country, logtype, date, hour,
+                                       	orc_subparts, orc_path)
+
 
     def mvHDFS(self, country, logtype, date, hour, partial=False):
         """Move completed data from tmp folder to target location.

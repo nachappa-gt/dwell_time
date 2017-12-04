@@ -416,6 +416,16 @@ class BaseArd(OptionContainer):
 
 
     def runHiveQuery(self, query):
+	#default to version 2
+        version = self.cfg.get('hive.version') if self.cfg.get('hive.version') else '2'
+	if version == '1':
+		self.runHiveV1Query(query)
+	else:
+		self.runHiveV2Query(query)
+	
+
+
+    def runHiveV2Query(self, query):
         """Run the specified Hive query"""
         beeline = self.cfg.get('hive.command')
         uri = self.cfg.get('hiveserver.uri')
@@ -429,6 +439,15 @@ class BaseArd(OptionContainer):
         cmd += " -e \"{}\"".format(query)
         system.execute(cmd, self.NORUN)   
           
+    def runHiveV1Query(self, query):
+        """Run the specified Hive query"""
+        beeline = self.cfg.get('hive.command')
+        queue = self.QUEUE if self.QUEUE else self.cfg.get('ard.default.queue')
+        
+        cmd = beeline
+        cmd += " --hiveconf tez.queue.name={}".format(queue)
+        cmd += " -e \"{}\"".format(query)
+        system.execute(cmd, self.NORUN)   
 
     def addHivePartitions(self, country, logtype, date,
                           hour, subparts, hourly_path):

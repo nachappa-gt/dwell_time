@@ -199,6 +199,7 @@ def main():
     # Get the context
     appName = get_app_name(opt)
     conf = SparkConf().setAppName(appName)
+    conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     sc = SparkContext(conf = conf)
     hiveContext = HiveContext(sc) 
 
