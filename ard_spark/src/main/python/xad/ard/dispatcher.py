@@ -79,6 +79,13 @@ class Dispatcher(BaseArd):
                 self.ARD_MAIN.s3Push(daily=True)
             elif (cmdKey == ck.get('s3ph')):
                 self.ARD_MAIN.s3Push(daily=False)
+
+            ### New code ###
+            elif (cmdKey == ck.get('p1d')):
+                self.ARD_MAIN.processOne(daily=True)
+
+            elif (cmdKey == ck.get('p2d')):
+                self.ARD_MAIN.processTwo(daily=True)
                 
             # Hive Partition on S3
             elif (cmdKey == ck.get('s3hive')):

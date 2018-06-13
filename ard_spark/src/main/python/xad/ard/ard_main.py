@@ -436,8 +436,85 @@ class ArdMain(BaseArd):
         if (self.MAXMAPS):
             cmd += " -m {}".format(self.MAXMAPS)
         cmd += " {} {}".format(hdfs_path, s3_path)
-        system.execute(cmd, self.NORUN)    
+        system.execute(cmd, self.NORUN)
 
+    ### -------------------------
+    ### New Code
+    ### -------------------------
+
+    def processOne(self, daily=False):
+        logging.info("Processing pipeline, module: 1 for (daily={})".format(daily))
+
+        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
+
+        regions = self.getRegions()
+        countries = self.getCountries()
+        logging.info("- dates = {}".format(dates))
+        logging.info("- countries = {}".format(countries))
+        logging.info("- regions = {}".format(regions))
+
+        for date in dates:
+            for region in regions:
+                # Split region
+                (country, logtype) = self.splitRegion(region)
+
+                # Status keys
+                # orc_hourly_key = self.get_orc_status_key(country, logtype)
+                # orc_daily_key = self.get_orc_status_key(country, logtype, True)
+                # s3p_hourly_key = self.get_s3put_status_key(country, logtype)
+                processOne_daily_key = self.get_processOne_status_key(country, logtype, True)
+
+                s3h_daily_key = self.get_s3hive_status_key(country, logtype, True)
+
+                # Check desgination
+                # s3p_status = self.status_log.getStatus(s3p_daily_key, date)
+                s3h_status = self.status_log.getStatus(s3h_daily_key, date)
+                if (not self.FORCE and s3h_status is not None and s3h_status == 1):
+                    logging.info("Status for s3h {} found for date {}".format(s3h_daily_key, date))
+
+                    if (daily):
+                        self._call_processOne(country, date)
+                        self.status_log.addStatus(processOne_daily_key, date)
+
+    def _cal_processOne(self, country, date):
+        print ("<<<<< Processing for date: {}, country:{} >>>>>".format(date, country))
+
+    def processTwo(self, daily=False):
+        logging.info("Processing pipeline, module:2 for (daily={})".format(daily))
+
+        dates = self.getDates('ard.process.window', 'yyyy/MM/dd')
+
+        regions = self.getRegions()
+        countries = self.getCountries()
+        logging.info("- dates = {}".format(dates))
+        logging.info("- countries = {}".format(countries))
+        logging.info("- regions = {}".format(regions))
+
+        for date in dates:
+            for region in regions:
+                # Split region
+                (country, logtype) = self.splitRegion(region)
+
+                # Status keys
+                # orc_hourly_key = self.get_orc_status_key(country, logtype)
+                # orc_daily_key = self.get_orc_status_key(country, logtype, True)
+                # s3p_hourly_key = self.get_s3put_status_key(country, logtype)
+                processTwo_daily_key = self.get_processTwo_status_key(country, logtype, True)
+
+                processOne_daily_key = self.get_processOne_status_key(country, logtype, True)
+
+                # Check desgination
+                # s3p_status = self.status_log.getStatus(s3p_daily_key, date)
+                processOne_status = self.status_log.getStatus(processOne_daily_key, date)
+                if (not self.FORCE and processOne_status is not None and processOne_status == 1):
+                    logging.info("Status for s3h {} found for date {}".format(processOne_status, date))
+
+                    if (daily):
+                        self._call_processTwo(country, date)
+                        self.status_log.addStatus(processTwo_daily_key, date)
+
+    def _cal_processTwo(self, country, date):
+        print ("<<<<< Processing for date: {}, country:{} >>>>>".format(date, country))
 
     #------------------------
     # S3 Partition on Hive
