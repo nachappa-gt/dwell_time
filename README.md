@@ -1,12 +1,12 @@
-# Science Score Extension
+# Dwell Time project
 
-This repository is composed of pipelines that augument the science core data.
+This repository contains the dwell time project impl. Description of the project goes here.
 
-## Abnormal Request Detection
+## ---------
 
-Detect abnormal user location.
+Insert the main aim of the module here.
 
 Folders:
 
-* ard_spark - Current version based on Spark.
+* dwell_spark - Current version based on Spark.
 

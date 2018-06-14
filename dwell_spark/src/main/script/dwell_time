@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# Shell wrapper for ard.py
+#
+# Copyright (C) 2016,2017.  xAd Inc.  All Rights Reserved.
+#
+
+SHARE_DIR=/home/xad/share
+PROJ_DIR=/home/xad/dwell_time
+ANACONDA_HOME=/opt/anaconda
+MAIN=$PROJ_DIR/python/dwell_time.py
+
+PATH=.:/home/xad/bin:$PROJ_DIR/bin:$PROJ_DIR/python:$ANACONDA_HOME/bin:$PATH
+export HADOOP_CLIENT_OPTS="-Djline.terminal=jline.UnsupportedTerminal"
+
+exec python2.7 $MAIN $*
+
