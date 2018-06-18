@@ -1,12 +1,12 @@
 #!/bin/env python2.7
 #
-# Copyright (C) 2016. xAd, Inc.  All Rights Reserved.
+# Copyright (C) 2018. GroundTruth.  All Rights Reserved.
 #
 
 """
 Main function for dwell_time.
 
-@author: xiangling
+@author: nachappa.ap
 """
 
 import sys
@@ -71,8 +71,6 @@ def parse_arguments():
     parser.add_argument('--country', help="Countries")
     parser.add_argument('--date', help="Date(s)")
     parser.add_argument('--hour', help="Hour(s)")
-    parser.add_argument('--fill', help="Fill folders")
-    parser.add_argument('--sl', help="SL (loc_score) folders")
     parser.add_argument('--keep', action='store_true',
                         help="Keep old output files")
     parser.add_argument('-l', '--lock', help="Define custom lock file",
@@ -93,11 +91,8 @@ def parse_arguments():
     parser.add_argument('-nl', '--nolock', action='store_true', help="No locking")
     parser.add_argument('-nm', '--nomodel', action='store_true', help="No modeling")
     parser.add_argument('-n',  '--norun', action='store_true', help="No run.")
-    parser.add_argument('--nosl', action='store_true', help="No smart location.")
     parser.add_argument('-ns', '--nostatus', action='store_true', help="No status update.")
     parser.add_argument('--partial', action='store_true', help="Partial replacement.")
-    parser.add_argument('--quick', action='store_true', 
-                        help="Quick partition creation for s3hive; no s3 check.")    
 
     opt = parser.parse_args()
     return(opt)
@@ -113,8 +108,6 @@ def init_logging(opt):
     else:
         level = logging.INFO
 
-    #fmt = ("%(asctime)s:%(name)s %(levelname)s " + "[%(module)s:%(funcName)s] %(message)s")
-    #fmt = ("[%(module)s:%(funcName)s] %(levelname)s %(message)s")
     fmt = ("%(asctime)s %(levelname)s [%(module)s.%(funcName)s] %(message)s")
     datefmt = '%Y-%m-%d %H:%M:%S'
     logging.basicConfig(format=fmt, datefmt=datefmt, level=level)
@@ -139,7 +132,7 @@ def exceptionHandler(e):
     global opt, conf
 
     # Get parameters from the configuration if it is available.
-    host = socket.gethostname();
+    host = socket.gethostname()
     if conf:
         to_addr = conf.get('alert.email')
         priority = conf.get('alert.email.priority')
@@ -164,7 +157,7 @@ def exceptionHandler(e):
     # Construct the email body and header
     msgArray = [str(e), "", "---", tb]
     email = MIMEText("\n".join(msgArray))
-    email['Subject'] = '[ALERT] ARD ({})'.format(host)
+    email['Subject'] = '[ALERT] DWELL TIME ({})'.format(host)
     email['From'] = from_addr
     email['To'] = to_addr
     if (priority != '0'):

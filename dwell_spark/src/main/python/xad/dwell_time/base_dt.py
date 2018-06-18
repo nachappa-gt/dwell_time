@@ -161,10 +161,10 @@ class BaseDT(OptionContainer):
         hive_query = ''
 
         # hive_template = Template("\"alter table ${table_name} add if not exists partition (cntry='${country}', dt='${dt}', prod_type= '${prod_type}', hour='${hour}', fill='${fill}', loc_score='${loc_score}') location '${path}';\"")
-        hive_template = Template("\"insert overwrite directory '${tmp_path}' row format delimited stored as orc\
-            select uid, request_id, r_timestamp, latitude, longitude, user_ip, fp_matches, r_s_info, sl_adjusted_confidence\
-            from ${table_name} where cntry='${country}' and dt='${query_date}' and (loc_score='tll' or loc_score='pos') and\
-            uid != '' and sl_adjusted_confidence >=94 and fp_matches is not null;\"")
+        hive_template = Template("\"insert overwrite directory '${tmp_path}' row format delimited stored as orc "
+                                 "select uid, request_id, r_timestamp, latitude, longitude, user_ip, fp_matches, r_s_info, sl_adjusted_confidence "
+                                 "from ${table_name} where cntry='${country}' and dt='${query_date}' and (loc_score='tll' or loc_score='pos') and "
+                                 "uid != '' and sl_adjusted_confidence >=94 and fp_matches is not null;\"")
         query = hive_template.substitute(table_name = table_name, country = country, dt = date, tmp_path = tmp_path, query_date = query_date)
         hive_query += query
 

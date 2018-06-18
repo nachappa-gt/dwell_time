@@ -11,8 +11,8 @@ from base_dt import BaseDT
 from xad.common import hdfs
 from xad.common import system
 
-ABD_MAP = {'fill=FILLED':'fill', 'fill=NOT_FILLED':'nf',
-           'loc_score=95':'tll', 'loc_score=94':'pos'}
+# ABD_MAP = {'fill=FILLED':'fill', 'fill=NOT_FILLED':'nf',
+#            'loc_score=95':'tll', 'loc_score=94':'pos'}
 
 
 class DwellTimeMain(BaseDT):
@@ -184,12 +184,13 @@ class DwellTimeMain(BaseDT):
         logging.info("Processing pipeline, module: 1 for (daily={})".format(daily))
 
         dates = self.getDates('dwell_time.process.window', 'yyyy/MM/dd')
-
         regions = self.getRegions()
         countries = self.getCountries()
+
         logging.info("- dates = {}".format(dates))
         logging.info("- countries = {}".format(countries))
         logging.info("- regions = {}".format(regions))
+
         logCounter = 0
         processed_logtypes = []
         for date in dates:
@@ -204,27 +205,27 @@ class DwellTimeMain(BaseDT):
                     logging.info("Status for ORC {} found for date {}".format(orc_daily_key, date))
                     logCounter += 1
                     processed_logtypes.append(region)
+
         logging.info("Logtype count for country: {} is {}".format(country, len(regions)))
         logging.info("Logtype count with processed ORC Status: {}".format(logCounter))
-        # logging.info("Logtype ORC processing completed  for: {}".format(processed_logtypes))
 
         if (len(regions) == logCounter):
-            logging.info("All logtypes present, Processing Module One...")
+            logging.info("All logtypes processed, Starting Module One...")
             for date in dates:
                 processOne_daily_key = self.get_processOne_status_key(country, True)
 
                 if (daily):
                     loc_path = self.cfg.get('spark.input.dir')
-                    tmp_path = loc_path+country+'/'+date
-                    self._call_processOne(country, date, tmp_path)
+                    tmp_path = loc_path + country + '/' + date
+                    self._sub_processOne(country, date, tmp_path)
                     if hdfs.has(tmp_path):
                         self.status_log.addStatus(processOne_daily_key, date)
                     else:
-                        logging.info("Check the HQL executed, tmp path missing!")
+                        logging.info("Check the HQL executed, tmp path missing for date: {}".format(date))
         else:
             logging.info("All logtypes aren't processed. Present are: {}".format(processed_logtypes))
 
-    def _call_processOne(self, country, date, tmp_path):
+    def _sub_processOne(self, country, date, tmp_path):
         print ("<<<<< HQL processing for date: {}, country:{} >>>>>".format(date, country))
         self.run_hql_cmd(country, date, tmp_path)
 
@@ -235,6 +236,7 @@ class DwellTimeMain(BaseDT):
         countries = self.getCountries()
         logging.info("- dates = {}".format(dates))
         logging.info("- countries = {}".format(countries))
+        output_path = self.cfg.get('spark.output.dir')
 
         for date in dates:
             for country in countries:
@@ -248,10 +250,13 @@ class DwellTimeMain(BaseDT):
                     logging.info("Status for processOne {} found for date {}".format(processOne_status, date))
 
                     if (daily):
-                        self._call_processTwo(country, date)
-                        self.status_log.addStatus(processTwo_daily_key, date)
+                        self._sub_processTwo(country, date)
+                        if hdfs.has(output_path):
+                            self.status_log.addStatus(processTwo_daily_key, date)
+                        else:
+                            logging.info("Output dir: {} not present after spark run".format(output_path))
 
-    def _call_processTwo(self, country, date):
+    def _sub_processTwo(self, country, date):
         logging.info("<<<<< Processing for date: {}, country:{} >>>>>".format(date, country))
         self.run_spark_cmd(country, date)
 
