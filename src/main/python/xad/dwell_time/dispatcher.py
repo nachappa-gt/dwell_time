@@ -14,18 +14,18 @@ import logging
 import os
 
 from xad.common.commandkey import CommandKey
-from xad.dwell_time.dt_main import DwellTimeMain
-from base_dt import BaseDT
+from xad.dwell_time.dwelltime_main import DwellTimeMain
+from xad.dwell_time.dwelltime_base import DwellTimeBase
 
 
 DEBUG = False
 
 
-class Dispatcher(BaseDT):
+class Dispatcher(DwellTimeBase):
 
     def __init__(self, cfg, opt):
         """Constructor"""
-        BaseDT.__init__(self, cfg, opt.__dict__)
+        DwellTimeBase.__init__(self, cfg, opt.__dict__)
         # Create components
         self.DWELL_TIME_MAIN = DwellTimeMain(cfg, opt.__dict__)
 
