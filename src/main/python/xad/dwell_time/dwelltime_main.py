@@ -33,8 +33,8 @@ class DwellTimeMain(DwellTimeBase):
         executor_cores = self._get_cfg('spark.process.executor_cores', country)
         executor_memory = self._get_cfg('spark.process.executor_memory', country)
         num_executors = self._get_cfg('spark.process.num_executors', country)
-        input_dir = self.cfg.get('spark.input.dir')
-        output_dir = self.cfg.get('spark.output.dir')
+        input_dir = self.cfg.get('data.hql.input.dir')
+        output_dir = self.cfg.get('data.output.dir')
 
         input_dir += country + '/' + date
         output_dir += country + '/' + date
@@ -103,7 +103,7 @@ class DwellTimeMain(DwellTimeBase):
                 prepare_daily_key = self.get_dt_prepare_status_key(country, True)
 
                 if (daily):
-                    loc_path = self.cfg.get('spark.output.dir')
+                    loc_path = self.cfg.get('data.hql.output.dir')
                     tmp_path = loc_path + country + '/' + date
                     self._sub_preparedt(country, date, tmp_path)
                     if hdfs.has(tmp_path):
@@ -124,7 +124,7 @@ class DwellTimeMain(DwellTimeBase):
         countries = self.getCountries()
         logging.info("- dates = {}".format(dates))
         logging.info("- countries = {}".format(countries))
-        output_path = self.cfg.get('spark.output.dir')
+        output_path = self.cfg.get('data.output.dir')
 
         for date in dates:
             for country in countries:
