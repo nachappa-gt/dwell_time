@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Shell wrapper for ard.py
+# Shell wrapper for dwell_time.py
 #
 # Copyright (C) 2016,2017.  xAd Inc.  All Rights Reserved.
 #

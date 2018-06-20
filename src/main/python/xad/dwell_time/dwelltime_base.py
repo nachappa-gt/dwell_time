@@ -19,7 +19,6 @@ import sys
 import os
 from datetime import datetime
 from datetime import timedelta
-from string import Template
 
 from xad.common import dateutil
 from xad.common import hourutil
@@ -114,33 +113,21 @@ class DwellTimeBase(OptionContainer):
         """Run Hive command to add partitions into hive table"""
         logging.info("Running Hive Command Line......")
         queue = self.cfg.get('dwell_time.default.queue')
-        table_name = self.cfg.get('dwell_time.output.table')
-        # loc_path = self.cfg.get('dwell_time.tmp.location.path')
         param_date = self.getDates(date,'yyyy-MM-dd')
         query_date = "".join(str(x) for x in param_date)
-        # tmp_path = loc_path+country+'/'+date
         logging.info("Temp path: {}".format(tmp_path))
         logging.info("Date being processed: {}".format(query_date))
 
-        hive_query = ''
-
-        # hive_template = Template("\"alter table ${table_name} add if not exists partition (cntry='${country}', dt='${dt}', prod_type= '${prod_type}', hour='${hour}', fill='${fill}', loc_score='${loc_score}') location '${path}';\"")
-        hive_template = Template("\"insert overwrite directory '${tmp_path}' row format delimited stored as orc "
-                                 "select uid, request_id, r_timestamp, latitude, longitude, user_ip, fp_matches, r_s_info, sl_adjusted_confidence "
-                                 "from ${table_name} where cntry='${country}' and dt='${query_date}' and (loc_score='tll' or loc_score='pos') and "
-                                 "uid != '' and sl_adjusted_confidence >=94 and fp_matches is not null;\"")
-        query = hive_template.substitute(table_name = table_name, country = country, dt = date, tmp_path = tmp_path, query_date = query_date)
-        hive_query += query
+        hive_exec = 'hive'
+        hql_path = self.cfg.get('hive.script.path')
 
         cmd = []
-        cmd = ["beeline"]
-        cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
-        cmd += ["--hiveconf", "tez.queue.name=" + queue]
-        cmd += ["-n", os.environ['USER']]
-        cmd += ["-e", hive_query]
-
+        cmd = [hive_exec,'-hiveconf', 'tmp_path=' + tmp_path]
+        cmd += ['-hiveconf', 'country=' + country]
+        cmd += ['-hiveconf', 'query_date=' + query_date]
+        cmd += ['-f', hql_path]
         command = ' '.join(cmd)
-        logging.info("Query to run: {}".format(command))
+        logging.info("HQL Query Running.. >>> {}".format(command))
         # system.execute(command, self.NORUN)
 
     #------------------
@@ -228,8 +215,6 @@ class DwellTimeBase(OptionContainer):
 
 def init_logging():
     """Initialize logging"""
-#    fmt = ("[%(module)s] %(levelname)s %(message)s")
-#    fmt = ("%(asctime)s:%(name)s %(levelname)s [%(funcName)s] %(message)s")
     fmt = ("%(asctime)s %(levelname)s [%(module)s.%(funcName)s] %(message)s")
     datefmt = '%Y-%m-%d %H:%M:%S'
     logging.basicConfig(format=fmt,
@@ -250,29 +235,6 @@ def load_config(conf_file="dwell_time.properties",
         conf.dump()
     return conf
 
-def _test_queries(base):
-
-    table_name =  base.cfg.get('dwell_time.output.table');
-    country = 'gb'
-    logtype = 'display'
-    date = '2017/04/25'
-    hour = '16'
-
-    hour_path = base._get_science_core_orc_path(country, logtype, date, hour)
-    logging.info("hour_path = {}".format(hour_path))
-    subparts = base.makeFullSubHourPartitions()
-    logging.info("subparts = {}".format(subparts))
-
-    # Drop
-    dropQuery = base.makeDropPartitionQuery(table_name, country, logtype,
-                                            date, hour)
-    logging.info("QUERY = {}".format(dropQuery))
-
-    # Add
-    locations = [os.path.join(hour_path, p[0], p[1]) for p in subparts]
-    addQuery = base.makeAddPartitionQuery(table_name, country, logtype, date,
-                                          hour, subparts, locations)
-    logging.info("QUERY = {}".format(addQuery))
 
 
 

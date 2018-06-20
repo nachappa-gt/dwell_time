@@ -5,7 +5,7 @@
 MAILTO=science-ops@xad.com
   
 # # TESTING
-* * * * * xad touch /tmp/CRON_TEST_ARD
+* * * * * xad touch /tmp/CRON_TEST_DWELL_TIME
   
 # # Log rotate
 0 0 * * * xad /usr/sbin/logrotate -s /home/xad/dwell_time/log/logrotate.status /home/xad/dwell_time/config/logrotate.conf > /dev/null 2>&1
