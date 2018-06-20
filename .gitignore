@@ -1,9 +1,0 @@
-*.swp
-*.pyc
-*~
-.classpath
-.project
-.pydevproject
-.gradle
-.settings
-build
