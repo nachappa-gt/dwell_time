@@ -108,27 +108,44 @@ class DwellTimeBase(OptionContainer):
         return key
 
 
-    def run_hql_cmd(self,country,date, tmp_path):
+    def run_hql_cmd(self,country,date, output_path):
 
         """Run Hive command to add partitions into hive table"""
         logging.info("Running Hive Command Line......")
         queue = self.cfg.get('dwell_time.default.queue')
+        hive_flavor = self.cfg.get('hive.cmdline.flavor')
+        hql_path = self.cfg.get('hive.script.path')
         param_date = self.getDates(date,'yyyy-MM-dd')
         query_date = "".join(str(x) for x in param_date)
-        logging.info("Temp path: {}".format(tmp_path))
+        logging.info("Temp path: {}".format(output_path))
         logging.info("Date being processed: {}".format(query_date))
 
-        hive_exec = 'hive'
-        hql_path = self.cfg.get('hive.script.path')
-
         cmd = []
-        cmd = [hive_exec,'-hiveconf', 'tmp_path=' + tmp_path]
-        cmd += ['-hiveconf', 'country=' + country]
-        cmd += ['-hiveconf', 'query_date=' + query_date]
-        cmd += ['-f', hql_path]
-        command = ' '.join(cmd)
-        logging.info("HQL Query Running.. >>> {}".format(command))
-        # system.execute(command, self.NORUN)
+        if (hive_flavor == 'hive'):
+            hive_exec = hive_flavor
+            cmd = [hive_exec,'-hiveconf', 'output_path=' + output_path]
+            cmd += ['-hiveconf', 'country=' + country]
+            cmd += ['-hiveconf', 'query_date=' + query_date]
+            cmd += ['-f', hql_path]
+            command = ' '.join(cmd)
+            logging.info("HQL Query Running.. >>> {}".format(command))
+            system.execute(command, self.NORUN)
+
+        elif (hive_flavor == 'beeline'):
+
+            cmd = ["beeline"]
+            cmd += ["-u", '"' + self.cfg.get('hiveserver.uri') + '"']
+            cmd += ["--hiveconf", "tez.queue.name=" + queue]
+            cmd += ["-hiveconf", "output_path=" + output_path]
+            cmd += ["-hiveconf", 'country=' + country]
+            cmd += ['-hiveconf', 'query_date=' + query_date]
+            cmd += ["-n", os.environ['USER']]
+            cmd += ["-f", hql_path]
+
+            command = ' '.join(cmd)
+            logging.info("Query to run: {}".format(command))
+            system.execute(command, self.NORUN)
+
 
     #------------------
     # Main Partitions

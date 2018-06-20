@@ -66,14 +66,15 @@ class DwellTimeMain(DwellTimeBase):
         
         cmdStr = " ".join(cmd)
         logging.info("Spark command: {}".format(cmdStr))
-        #system.execute(cmdStr, self.NORUN)
+        system.execute(cmdStr, self.NORUN)
 
     def prepare_dwelltime(self, daily=False):
-        logging.info("Processing pipeline, module: 1 for (daily={})".format(daily))
+        logging.info("Validating Processing pipeline... ")
 
         dates = self.getDates('dwell_time.process.window', 'yyyy/MM/dd')
         regions = self.getRegions()
         countries = self.getCountries()
+        logtypeCount = len(regions)
 
         logging.info("- dates = {}".format(dates))
         logging.info("- countries = {}".format(countries))
@@ -90,32 +91,41 @@ class DwellTimeMain(DwellTimeBase):
                 orc_daily_key = self.get_orc_status_key(country, logtype, True)
                 orc_status = self.status_log.getStatus(orc_daily_key, date)
                 if (not self.FORCE and orc_status is not None and orc_status == 1):
-                    logging.info("Status for ORC {} found for date {}".format(orc_daily_key, date))
+
                     logCounter += 1
                     processed_logtypes.append(region)
 
-        logging.info("Logtype count for country: {} is {}".format(country, len(regions)))
-        logging.info("Logtype count with processed ORC Status: {}".format(logCounter))
-
-        if (len(regions) == logCounter):
-            logging.info("All logtypes processed, Starting Module One...")
-            for date in dates:
-                prepare_daily_key = self.get_dt_prepare_status_key(country, True)
-
-                if (daily):
-                    loc_path = self.cfg.get('data.hql.output.dir')
-                    tmp_path = loc_path + country + '/' + date
-                    self._sub_preparedt(country, date, tmp_path)
-                    if hdfs.has(tmp_path):
-                        self.status_log.addStatus(prepare_daily_key, date)
+                    prepare_daily_key = self.get_dt_prepare_status_key(country, True)
+                    prepare_status = self.status_log.getStatus(prepare_daily_key, date)
+                    if (prepare_status is None and prepare_status != 1):
+                        if (logtypeCount == logCounter):
+                            logging.info("Logtype count for country: {} is {}".format(country, len(regions)))
+                            logging.info("Logtype count with processed ORC Status: {}".format(logCounter))
+                            self._run_prepare(date, country)
                     else:
-                        logging.info("Check the HQL executed, tmp path missing for date: {}".format(date))
-        else:
-            logging.info("All logtypes aren't processed. Present are: {}".format(processed_logtypes))
+                        logging.info("Already processed, key found: {} ,skipped processing for date: {}".format(prepare_daily_key,date))
+                elif (self.FORCE):
+                    self._run_prepare(date, country)
 
-    def _sub_preparedt(self, country, date, tmp_path):
-        print ("<<<<< HQL processing for date: {}, country:{} >>>>>".format(date, country))
-        self.run_hql_cmd(country, date, tmp_path)
+
+
+    def _run_prepare(self, date, country):
+        logging.info("Starting Processing pipeline... ")
+
+        prepare_daily_key = self.get_dt_prepare_status_key(country, True)
+        loc_path = self.cfg.get('data.hql.output.dir')
+        output_path = loc_path + country + '/' + date
+        logging.info ("<<<<< HQL processing for date: {}, country:{} >>>>>".format(date, country))
+        self.run_hql_cmd(country, date, output_path)
+        if hdfs.has(output_path):
+            self.status_log.addStatus(prepare_daily_key, date)
+        else:
+            logging.info("Check the HQL executed, tmp path missing for date: {}".format(date))
+
+
+    # def _sub_preparedt(self, country, date, tmp_path):
+    #     print ("<<<<< HQL processing for date: {}, country:{} >>>>>".format(date, country))
+    #     self.run_hql_cmd(country, date, tmp_path)
 
     def process_dwelltime(self, daily=False):
         logging.info("Processing pipeline, module:2 for (daily={})".format(daily))
@@ -143,6 +153,9 @@ class DwellTimeMain(DwellTimeBase):
                             self.status_log.addStatus(process_daily_key, date)
                         else:
                             logging.info("Output dir: {} not present after spark run".format(output_path))
+
+                elif (self.FORCE):
+                    self._sub_processdt(country, date)
 
     def _sub_processdt(self, country, date):
         logging.info("<<<<< Processing for date: {}, country:{} >>>>>".format(date, country))
