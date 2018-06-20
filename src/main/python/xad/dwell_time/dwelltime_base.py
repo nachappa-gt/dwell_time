@@ -117,7 +117,7 @@ class DwellTimeBase(OptionContainer):
         hql_path = self.cfg.get('hive.script.path')
         param_date = self.getDates(date,'yyyy-MM-dd')
         query_date = "".join(str(x) for x in param_date)
-        logging.info("Temp path: {}".format(output_path))
+        logging.info("Output path: {}".format(output_path))
         logging.info("Date being processed: {}".format(query_date))
 
         cmd = []
@@ -129,7 +129,7 @@ class DwellTimeBase(OptionContainer):
             cmd += ['-f', hql_path]
             command = ' '.join(cmd)
             logging.info("HQL Query Running.. >>> {}".format(command))
-            system.execute(command, self.NORUN)
+            # system.execute(command, self.NORUN)
 
         elif (hive_flavor == 'beeline'):
 
@@ -144,7 +144,7 @@ class DwellTimeBase(OptionContainer):
 
             command = ' '.join(cmd)
             logging.info("Query to run: {}".format(command))
-            system.execute(command, self.NORUN)
+            # system.execute(command, self.NORUN)
 
 
     #------------------

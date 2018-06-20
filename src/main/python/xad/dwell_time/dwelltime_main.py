@@ -66,7 +66,7 @@ class DwellTimeMain(DwellTimeBase):
         
         cmdStr = " ".join(cmd)
         logging.info("Spark command: {}".format(cmdStr))
-        system.execute(cmdStr, self.NORUN)
+        # system.execute(cmdStr, self.NORUN)
 
     def prepare_dwelltime(self, daily=False):
         logging.info("Validating Processing pipeline... ")
@@ -78,36 +78,31 @@ class DwellTimeMain(DwellTimeBase):
 
         logging.info("- dates = {}".format(dates))
         logging.info("- countries = {}".format(countries))
-        logging.info("- regions = {}".format(regions))
 
         logCounter = 0
-        processed_logtypes = []
         for date in dates:
-            for region in regions:
-                # Split region
-                (country, logtype) = self.splitRegion(region)
+            for country in countries:
+                # Get the logtypes associated with a country
+                logTypes = self._get_country_logtypes(country)
 
-                # Status keys
-                orc_daily_key = self.get_orc_status_key(country, logtype, True)
-                orc_status = self.status_log.getStatus(orc_daily_key, date)
-                if (not self.FORCE and orc_status is not None and orc_status == 1):
-
-                    logCounter += 1
-                    processed_logtypes.append(region)
-
-                    prepare_daily_key = self.get_dt_prepare_status_key(country, True)
-                    prepare_status = self.status_log.getStatus(prepare_daily_key, date)
-                    if (prepare_status is None and prepare_status != 1):
-                        if (logtypeCount == logCounter):
-                            logging.info("Logtype count for country: {} is {}".format(country, len(regions)))
-                            logging.info("Logtype count with processed ORC Status: {}".format(logCounter))
-                            self._run_prepare(date, country)
-                    else:
-                        logging.info("Already processed, key found: {} ,skipped processing for date: {}".format(prepare_daily_key,date))
-                elif (self.FORCE):
+                if (self.FORCE):
                     self._run_prepare(date, country)
+                else:
+                    for logtype in logTypes:
+                        # Get the status keys
+                        orc_daily_key = self.get_orc_status_key(country, logtype, True)
+                        orc_status = self.status_log.getStatus(orc_daily_key, date)
+                        if (not self.FORCE and orc_status is not None and orc_status == 1):
+                            logCounter += 1
 
-
+                prepare_daily_key = self.get_dt_prepare_status_key(country, True)
+                prepare_status = self.status_log.getStatus(prepare_daily_key, date)
+                if (prepare_status is None):
+                    if (logtypeCount == logCounter):
+                        logging.info("Proceeding with dwell time prepare module... ")
+                        self._run_prepare(date, country)
+                else:
+                    logging.info("Already processed, key found: {} ,skipped processing for date: {}".format(prepare_daily_key,date))
 
     def _run_prepare(self, date, country):
         logging.info("Starting Processing pipeline... ")
@@ -122,10 +117,6 @@ class DwellTimeMain(DwellTimeBase):
         else:
             logging.info("Check the HQL executed, tmp path missing for date: {}".format(date))
 
-
-    # def _sub_preparedt(self, country, date, tmp_path):
-    #     print ("<<<<< HQL processing for date: {}, country:{} >>>>>".format(date, country))
-    #     self.run_hql_cmd(country, date, tmp_path)
 
     def process_dwelltime(self, daily=False):
         logging.info("Processing pipeline, module:2 for (daily={})".format(daily))
