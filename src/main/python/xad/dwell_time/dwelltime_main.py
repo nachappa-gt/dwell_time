@@ -84,25 +84,26 @@ class DwellTimeMain(DwellTimeBase):
             for country in countries:
                 # Get the logtypes associated with a country
                 logTypes = self._get_country_logtypes(country)
+                for logtype in logTypes:
+                    # Get the status keys
+                    orc_daily_key = self.get_orc_status_key(country, logtype, True)
+                    orc_status = self.status_log.getStatus(orc_daily_key, date)
+                    if (orc_status is not None and orc_status == 1):
+                        logCounter += 1
 
-                if (self.FORCE):
+                logging.info("Count of processed logtypes: {}".format(logCounter))
+                if (self.FORCE and logtypeCount == logCounter):
                     self._run_prepare(date, country)
-                else:
-                    for logtype in logTypes:
-                        # Get the status keys
-                        orc_daily_key = self.get_orc_status_key(country, logtype, True)
-                        orc_status = self.status_log.getStatus(orc_daily_key, date)
-                        if (not self.FORCE and orc_status is not None and orc_status == 1):
-                            logCounter += 1
 
-                prepare_daily_key = self.get_dt_prepare_status_key(country, True)
-                prepare_status = self.status_log.getStatus(prepare_daily_key, date)
-                if (prepare_status is None):
-                    if (logtypeCount == logCounter):
-                        logging.info("Proceeding with dwell time prepare module... ")
-                        self._run_prepare(date, country)
-                else:
-                    logging.info("Already processed, key found: {} ,skipped processing for date: {}".format(prepare_daily_key,date))
+                elif (not self.FORCE):
+                    prepare_daily_key = self.get_dt_prepare_status_key(country, True)
+                    prepare_status = self.status_log.getStatus(prepare_daily_key, date)
+                    if (prepare_status is None):
+                        if (logtypeCount == logCounter):
+                            logging.info("Proceeding with dwell time prepare module... ")
+                            self._run_prepare(date, country)
+                    else:
+                        logging.info("Already processed, key found: {} ,skipped processing for date: {}".format(prepare_daily_key,date))
 
     def _run_prepare(self, date, country):
         logging.info("Starting Processing pipeline... ")
