@@ -86,22 +86,22 @@ class DwellTimeBase(OptionContainer):
             key = os.path.join(prefix, country, logtype)
         return key
 
-    def get_processOne_status_key(self, country, daily=False):
+    def get_dt_prepare_status_key(self, country, daily=False):
         """Get status_log key for process"""
-        prefix = self.cfg.get('status_log_local.key.dwell_time_processOne')
-        tag = self.cfg.get('status_log_local.tag.processOne.daily') if daily else \
-            self.cfg.get('status_log_local.tag.processOne')
+        prefix = self.cfg.get('status_log_local.key.dwell_time_prepare')
+        tag = self.cfg.get('status_log_local.tag.prepare.daily') if daily else \
+            self.cfg.get('status_log_local.tag.prepare')
         if (tag):
             key = os.path.join(prefix, country, tag)
         else:
             key = os.path.join(prefix, country)
         return key
 
-    def get_processTwo_status_key(self, country, daily=False):
+    def get_dt_gen_status_key(self, country, daily=False):
         """Get status_log key for module"""
-        prefix = self.cfg.get('status_log_local.key.dwell_time_processTwo')
-        tag = self.cfg.get('status_log_local.tag.processTwo.daily') if daily else \
-            self.cfg.get('status_log_local.tag.processTwo')
+        prefix = self.cfg.get('status_log_local.key.dwell_time_process')
+        tag = self.cfg.get('status_log_local.tag.process.daily') if daily else \
+            self.cfg.get('status_log_local.tag.process')
         if (tag):
             key = os.path.join(prefix, country, tag)
         else:
@@ -274,24 +274,5 @@ def _test_queries(base):
                                           hour, subparts, locations)
     logging.info("QUERY = {}".format(addQuery))
 
-
-# def main():
-#     '''Unit test driver'''
-#     init_logging();
-#     conf = load_config()
-#     base = DwellTimeBase(conf)
-#
-#     # Tests
-# #    _test_sub_hour_partitions(base)
-# #    _test_findMissingPartitions(base)
-# #    _test_queries(base)
-# #     _test_sl(base)
-#
-#     print ("Done!")
-#
-#
-# if (__name__ == "__main__"):
-#     """Unit Test"""
-#     main()
 
 

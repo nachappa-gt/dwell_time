@@ -68,7 +68,7 @@ class DwellTimeMain(DwellTimeBase):
         logging.info("Spark command: {}".format(cmdStr))
         #system.execute(cmdStr, self.NORUN)
 
-    def processOne(self, daily=False):
+    def prepare_dwelltime(self, daily=False):
         logging.info("Processing pipeline, module: 1 for (daily={})".format(daily))
 
         dates = self.getDates('dwell_time.process.window', 'yyyy/MM/dd')
@@ -100,24 +100,24 @@ class DwellTimeMain(DwellTimeBase):
         if (len(regions) == logCounter):
             logging.info("All logtypes processed, Starting Module One...")
             for date in dates:
-                processOne_daily_key = self.get_processOne_status_key(country, True)
+                prepare_daily_key = self.get_dt_prepare_status_key(country, True)
 
                 if (daily):
-                    loc_path = self.cfg.get('spark.input.dir')
+                    loc_path = self.cfg.get('spark.output.dir')
                     tmp_path = loc_path + country + '/' + date
-                    self._sub_processOne(country, date, tmp_path)
+                    self._sub_preparedt(country, date, tmp_path)
                     if hdfs.has(tmp_path):
-                        self.status_log.addStatus(processOne_daily_key, date)
+                        self.status_log.addStatus(prepare_daily_key, date)
                     else:
                         logging.info("Check the HQL executed, tmp path missing for date: {}".format(date))
         else:
             logging.info("All logtypes aren't processed. Present are: {}".format(processed_logtypes))
 
-    def _sub_processOne(self, country, date, tmp_path):
+    def _sub_preparedt(self, country, date, tmp_path):
         print ("<<<<< HQL processing for date: {}, country:{} >>>>>".format(date, country))
         self.run_hql_cmd(country, date, tmp_path)
 
-    def processTwo(self, daily=False):
+    def process_dwelltime(self, daily=False):
         logging.info("Processing pipeline, module:2 for (daily={})".format(daily))
 
         dates = self.getDates('dwell_time.process.window', 'yyyy/MM/dd')
@@ -130,21 +130,21 @@ class DwellTimeMain(DwellTimeBase):
             for country in countries:
 
                 # Status keys
-                processTwo_daily_key = self.get_processTwo_status_key(country, True)
-                processOne_daily_key = self.get_processOne_status_key(country, True)
-                processOne_status = self.status_log.getStatus(processOne_daily_key, date)
+                process_daily_key = self.get_dt_gen_status_key(country, True)
+                prepare_daily_key = self.get_dt_prepare_status_key(country, True)
+                prepare_status = self.status_log.getStatus(prepare_daily_key, date)
 
-                if (not self.FORCE and processOne_status is not None and processOne_status == 1):
-                    logging.info("Status for processOne {} found for date {}".format(processOne_status, date))
+                if (not self.FORCE and prepare_status is not None and prepare_status == 1):
+                    logging.info("Status for processOne {} found for date {}".format(prepare_status, date))
 
                     if (daily):
-                        self._sub_processTwo(country, date)
+                        self._sub_processdt(country, date)
                         if hdfs.has(output_path):
-                            self.status_log.addStatus(processTwo_daily_key, date)
+                            self.status_log.addStatus(process_daily_key, date)
                         else:
                             logging.info("Output dir: {} not present after spark run".format(output_path))
 
-    def _sub_processTwo(self, country, date):
+    def _sub_processdt(self, country, date):
         logging.info("<<<<< Processing for date: {}, country:{} >>>>>".format(date, country))
         self.run_spark_cmd(country, date)
 
@@ -155,4 +155,3 @@ class DwellTimeMain(DwellTimeBase):
         altKey = baseKey
         countryKey = baseKey + "." + country
         return self.cfg.get(countryKey, altKey)
-

@@ -67,12 +67,11 @@ class Dispatcher(DwellTimeBase):
         for cmdKey in activeKeys:
             beginTime = self._beginSession(cmdKey)
 
-            ### New code ###
-            if (cmdKey == ck.get('processOne')):
-                self.DWELL_TIME_MAIN.processOne(daily=True)
+            if (cmdKey == ck.get('dt_prepare')):
+                self.DWELL_TIME_MAIN.prepare_dwelltime(daily=True)
 
-            elif (cmdKey == ck.get('processTwo')):
-                self.DWELL_TIME_MAIN.processTwo(daily=True)
+            elif (cmdKey == ck.get('dt_process')):
+                self.DWELL_TIME_MAIN.process_dwelltime(daily=True)
 
             # TEST
             elif (cmdKey == ck.get('test')):
